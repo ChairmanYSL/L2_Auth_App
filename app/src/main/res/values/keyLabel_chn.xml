@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="FnKey">FUNC</string>
+    <string name="UpKey">UP</string>
+    <string name="DownKey">DOWN</string>
+    <string name="MenuKey">MENU</string>
+    
+    <string name="OneKey">1QZ.</string>
+    <string name="TwoKey">2ABC</string>
+    <string name="ThreeKey">3DEF</string>
+    <string name="ClearKey">CLEAR</string>
+    
+    <string name="FourKey">4GHI</string>
+    <string name="FiveKey">5JKL</string>
+    <string name="SixKey">6MNO</string>
+    <string name="BckspcKey">BACKSPACE</string>
+    
+    <string name="SevenKey">7PRS</string>
+    <string name="EightKey">8TUV</string>
+    <string name="NineKey">9WXY</string>
+    <string name="CancelKey">CANCEL</string>
+    
+    <string name="ExitKey">EXIT</string>
+    <string name="ZeroKey">0,*#</string>
+    <string name="AlphaKey">ALPHA</string>
+    <string name="EnterKey">ENTER</string>
+</resources>

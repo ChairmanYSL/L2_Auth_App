@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#242424"
+              android:orientation="vertical">
+
+    <RelativeLayout android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:background="#FD781E"
+    >
+        <ImageView android:id="@+id/arrow_title"
+                   android:layout_width="40dp"
+                   android:layout_height="wrap_content"
+                   android:layout_centerVertical="true"
+                   android:layout_marginStart="15dp"
+                   android:src="@drawable/arrow"
+            android:layout_marginLeft="15dp" />
+        <TextView android:id="@+id/tv_title"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_centerInParent="true"
+                  android:text="E-Signature"
+                  android:textColor="#ffffff"
+                  android:textSize="18sp"
+        />
+
+    </RelativeLayout>
+
+    <RelativeLayout android:layout_width="match_parent"
+                    android:layout_height="271dp"
+                    android:layout_marginEnd="15dp"
+                    android:layout_marginStart="15dp"
+                    android:layout_marginTop="15dp"
+                    android:background="#ffffff">
+        <ImageView
+            android:id="@+id/iv_elecsign"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+
+        />
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_centerHorizontal="true"
+                  android:layout_marginTop="22dp"
+                  android:text="Signature zone"
+                  android:textColor="#99999999"
+                  android:textSize="18sp"
+        />
+
+    </RelativeLayout>
+    <TextView android:id="@+id/tv_sign_confirm"
+              android:layout_width="match_parent"
+              android:layout_height="45dp"
+              android:background="#34bf31"
+              android:gravity="center"
+              android:layout_marginStart="15dp"
+              android:layout_marginEnd="15dp"
+              android:textColor="#ffffff"
+              android:layout_marginTop="45dp"
+              android:text="OK"
+    />
+    <TextView android:id="@+id/tv_sign_repeat"
+              android:layout_width="match_parent"
+              android:gravity="center"
+              android:layout_marginStart="15dp"
+              android:layout_marginEnd="15dp"
+              android:background="#ef452c"
+              android:layout_height="45dp"
+              android:textColor="#ffffff"
+              android:layout_marginTop="15dp"
+              android:text="Re-sign"
+    />
+
+
+</LinearLayout>

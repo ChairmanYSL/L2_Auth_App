@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+    android:keyWidth="25%p"
+    android:horizontalGap="0px"
+    android:verticalGap="0px"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keyHeight="10%p">
+    <Row>
+        <Key android:codes="0x15" android:keyLabel="@string/FnKey" />
+        <Key android:codes="0x01" android:keyLabel="@string/UpKey" />
+        <Key android:codes="0x02" android:keyLabel="@string/DownKey" />
+        <Key android:codes="0x03" android:keyLabel="@string/MenuKey" 
+            android:keyEdgeFlags="right" />
+    </Row>
+    
+    <Row>
+        <Key android:codes="0x31" android:keyLabel="@string/OneKey" />
+        <Key android:codes="0x32" android:keyLabel="@string/TwoKey" />
+        <Key android:codes="0x33" android:keyLabel="@string/ThreeKey" />
+        <Key android:codes="0x43" android:keyLabel="@string/ClearKey"
+            android:keyEdgeFlags="right" />
+    </Row>
+    
+    <Row>
+        <Key android:codes="0x34" android:keyLabel="@string/FourKey" />
+        <Key android:codes="0x35" android:keyLabel="@string/FiveKey" />
+        <Key android:codes="0x36" android:keyLabel="@string/SixKey" />
+        <Key android:codes="0x40" android:keyLabel="@string/BckspcKey" 
+            android:keyEdgeFlags="right" />
+    </Row>
+    
+    <Row>
+        <Key android:codes="0x37" android:keyLabel="@string/SevenKey" />
+        <Key android:codes="0x38" android:keyLabel="@string/EightKey" />
+        <Key android:codes="0x39" android:keyLabel="@string/NineKey" />
+        <Key android:codes="0x3f" android:keyLabel="@string/CancelKey" 
+            android:keyEdgeFlags="right" />
+    </Row>
+    <Row>
+        <Key android:codes="0x05" android:keyLabel="@string/ExitKey" />
+        <Key android:codes="0x30" android:keyLabel="@string/ZeroKey" />
+        <Key android:codes="0x42" android:keyLabel="@string/AlphaKey" />
+        <Key android:codes="0x3e" android:keyLabel="@string/EnterKey" android:keyTextColor="#00ff00" 
+            android:keyEdgeFlags="right"/>
+    </Row>
+</Keyboard>
