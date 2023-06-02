@@ -1,5 +1,6 @@
 #include "appglobal.h"
 #include "host.h"
+#include "dllpure.h"
 
 
 #define BCTC_SEND_LEN 1024
@@ -268,7 +269,7 @@ void ReadRecovaData()
 }
 
 
-s32 TlvToCAPKStruct(u8 *buf, u16 ilen)
+s32 BCTCTlvToCAPKStruct(u8 *buf, u16 ilen)
 {
     u8 *pb, *pbTlv, *p9F06, *pDF03;
     u16 checkLen = 0;
@@ -465,12 +466,12 @@ s32 TlvToCAPKStruct(u8 *buf, u16 ilen)
 
 void BCTCUpDataParam_CAPK()
 {
-    u8 MsgType, ComPackSend[16];
+    u8 MsgType, ComPackSend[16]={0};
     u16 ComPackSendLen, ComPackRecvLen, Paraindex;
     u16 PararecordNum, PararecordLen, Parai;
     u8 recordType;
     s32 retCode = SDK_ERR;
-    u8 *ComPackRecv = NULL;
+    u8 ComPackRecv[1030]={0};
     u16 TagLen;
     bool EndFlag = 0;
     u8 step = 1;
@@ -481,20 +482,27 @@ void BCTCUpDataParam_CAPK()
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Download CAPK", SDK_DISP_DEFAULT);
     sdkDispBrushScreen();
 
-	gSerialPortId = OpenComm();
-	if(gSerialPortId < 0)
+	if(HOST_TRANS_SERIAL == gHostTransType)
 	{
-		sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
-		return SDK_ERR;
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
 	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
+    {
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+    }
 
     sdkEMVBaseDelAllCAPKLists();
-//	sdkEMVBaseDelAllGMCAPKLists();
     memset(ComPackSend, 0, sizeof(ComPackSend));
     ComPackSendLen = 0;
     ComPackRecvLen = 0;
-	ComPackRecv = (u8 *)sdkGetMem(1024);
-	memset(ComPackRecv, 0, 1024);
     MsgType = BCTC_MNG_DownloadCAPK_SEND;
 
     while(step)
@@ -516,21 +524,17 @@ void BCTCUpDataParam_CAPK()
             ComPackRecvLen = 0;
             ComPackSend[0] = MsgType;
             ComPackSendLen++;
-//            ComPackSend[ComPackSendLen++] = 3;
-//            ComPackSend[ComPackSendLen++] = 1;
-//            ComPackSend[ComPackSendLen++] = 0;
             BCTCSendData(ComPackSend, ComPackSendLen);
         }
         step++;
 
         while(!EndFlag)
         {
-            len = BCTCRecvData(ComPackRecv, 1024);
+			sdkmSleep(1500);
+            len = BCTCRecvData(ComPackRecv, 1030);
 			Trace("lishiyao", "BCTCRecvData len = %d\r\n", len);
             if(len <= 0)
             {
-                sdkFreeMem(ComPackRecv);
-                ComPackRecv = NULL;
                 EndFlag = 1;
                 retCode = SDK_ERR;
                 Trace("lishiyao", "error flag1\r\n");
@@ -541,11 +545,6 @@ void BCTCUpDataParam_CAPK()
 
             if((ComPackRecv[1] != BCTC_MNG_DownloadCAPK_RECV) || (ComPackRecv[0] != 0x02))
             {
-				if(ComPackRecv != NULL)
-				{
-					sdkFreeMem(ComPackRecv);
-				}
-                ComPackRecv = NULL;
                 EndFlag = 1;
                 retCode = SDK_ERR;
 				Trace("bctc", "2Byte:%02X\r\n", ComPackRecv[1]);
@@ -556,17 +555,15 @@ void BCTCUpDataParam_CAPK()
 
             if(memcmp(&ComPackRecv[4], "\x03\x01\x00", 3) == 0)	//下载完成
             {
-                sdkFreeMem(ComPackRecv);
-                ComPackRecv = NULL;
                 retCode = SDK_OK;
                 EndFlag = 1;
                 break;
             }
             TagLen = ComPackRecv[2] * 256 + ComPackRecv[3];
 
-            TraceHex("emv", "CAPK recvdata", ComPackRecv, TagLen + 4);
+            TraceHex("emv", "CAPK recvdata", ComPackRecv+4, TagLen);
 
-            if(SDK_OK == TlvToCAPKStruct(&ComPackRecv[4], TagLen))
+            if(SDK_OK == BCTCTlvToCAPKStruct(&ComPackRecv[4], TagLen))
             {
                 retCode = SDK_OK;
             }
@@ -585,10 +582,6 @@ void BCTCUpDataParam_CAPK()
         }
     }
 
-    if(ComPackRecv != NULL)
-    {
-        sdkFreeMem(ComPackRecv);
-    }
     sdkDispClearScreen();
 	if(retCode == SDK_OK)
 	{
@@ -597,7 +590,6 @@ void BCTCUpDataParam_CAPK()
 	else
 	{
 		sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_ERR, SDK_DISP_DEFAULT);
-		sdkCommCloseUart(gSerialPortId);
 	}
     sdkDispBrushScreen();
 	if(gstAutoTest == 0)
@@ -608,7 +600,7 @@ void BCTCUpDataParam_CAPK()
 
 
 
-s32 TlvToAIDStruct(u8 *buf, u16 ilen)
+s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
 {
     u8 *pb, *pbTlv;
     SDK_EMVBASE_AID_STRUCT *tempAid;
@@ -643,7 +635,11 @@ s32 TlvToAIDStruct(u8 *buf, u16 ilen)
 		extempAid->AidLen = TlvLen(pbTlv);
         memcpy(extempAid->Aid, pb, extempAid->AidLen);
     }
-    pbTlv = TlvSeek(buf, ilen, 0xDF01); 	//Asi
+
+	TraceHex("Download AID", "Base AID Name", tempAid->Aid, tempAid->AidLen);
+	TraceHex("Download AID", "Extern AID Name", tempAid->Aid, tempAid->AidLen);
+
+	pbTlv = TlvSeek(buf, ilen, 0xDF01); 	//Asi
 
     if(pbTlv != NULL)
     {
@@ -705,9 +701,12 @@ s32 TlvToAIDStruct(u8 *buf, u16 ilen)
 		{
 			pb = TlvVPtr(pbTlv);
         	memcpy( &(tempAid->transvaule), pb, TlvLen(pbTlv));
+			memcpy(&(extempAid->TransType), pb, TlvLen(pbTlv));
 		}
-
     }
+
+	Trace("Download AID", "Base TransType: %02X\r\n", tempAid->transvaule);
+	Trace("Download AID", "Extern TransType: %02X\r\n", extempAid->TransType);
 
     pbTlv = TlvSeek(buf, ilen, 0xDF13);    //TacDecline
 
@@ -1046,9 +1045,21 @@ void BCTCUpDataParam_AID()
 
     MsgType = BCTC_MNG_DownloadAID_SEND;
 
-    if(OpenComm() != SDK_OK)
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        retCode = SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
 
     while(step)
@@ -1119,7 +1130,7 @@ void BCTCUpDataParam_AID()
             TagLen = ComPackRecv[2] * 256 + ComPackRecv[3];
             TraceHex("", "AID_recvdata ", ComPackRecv, TagLen + 4);
 
-            if(SDK_OK == TlvToAIDStruct(&ComPackRecv[4], TagLen))
+            if(SDK_OK == BCTCTlvToAIDStruct(&ComPackRecv[4], TagLen))
             {
                 retCode = SDK_OK;
             }
@@ -1164,7 +1175,6 @@ s32 TlvToTERMINFO(unsigned char *buf, int ilen)
     u8 time[8] = {0};
     u8 fn[64] = {0};
 	s32 len;
-
 
     sdkSysGetCurAppDir(fn);
     strcat(fn, "SimData");
@@ -1789,10 +1799,12 @@ void BCTCPostUpDateParam(void)
         sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_BCTCHOSTMENU2, SDK_DISP_LEFT_DEFAULT);
         sdkDispFillRowRam(SDK_DISP_LINE4, 0, DISP_BCTCHOSTMENU3, SDK_DISP_LEFT_DEFAULT);
         sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_BCTCHOSTMENU4, SDK_DISP_LEFT_DEFAULT);
-        sdkDispBrushScreen();
+        sdkDispFillRowRam(SDK_DISP_LINE_MAX, 0, DISP_BCTCHOSTMENU5, SDK_DISP_LEFT_DEFAULT);
+
+		sdkDispBrushScreen();
 
         key = sdkKbWaitKey(SDK_KEY_MASK_1 | SDK_KEY_MASK_2 | SDK_KEY_MASK_3 | SDK_KEY_MASK_4 | SDK_KEY_MASK_5| SDK_KEY_MASK_6
-                           | SDK_KEY_MASK_ENTER | SDK_KEY_MASK_ESC | SDK_KEY_MASK_DOWN | SDK_KEY_MASK_UP, 0);
+                           | SDK_KEY_MASK_ENTER | SDK_KEY_MASK_ESC | SDK_KEY_MASK_DOWN | SDK_KEY_MASK_UP | SDK_KEY_MASK_7 | SDK_KEY_MASK_8, 0);
 		Trace("BCTC", "key = %02X\r\n", key);
         switch ( key )
         {
@@ -1815,9 +1827,18 @@ void BCTCPostUpDateParam(void)
              case SDK_KEY_5:
                BCTCUpDataParam_PKRecova();
                break;
+
 			case SDK_KEY_6:
 				PostInitSysData();
                break;
+
+			case SDK_KEY_7:
+				PostSetTCPSetting();
+				break;
+
+			case SDK_KEY_8:
+				PostSetHostCommuType();
+				 break;
 
              case SDK_KEY_ENTER:
              case SDK_KEY_DOWN:
@@ -1901,10 +1922,23 @@ s32 BCTCSendReversal()
 //    sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_COMMUTOHOST, SDK_DISP_DEFAULT);
 //    sdkDispBrushScreen();
 
-    if(OpenComm() != SDK_OK)
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
+
     ComPackSendLen = 0;
     ComPackRecvLen = 0;
 
@@ -2040,10 +2074,23 @@ s32 BCTCSendConfirm(void)
 
     MsgType = BCTC_TRS_FinReqConfirm_SEND;
 
-    if(SDK_OK != OpenComm())
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
+
 
 	ComPackSend = (u8*)sdkGetMem(BCTC_SEND_LEN);
     memset(ComPackSend, 0, BCTC_SEND_LEN);
@@ -2109,16 +2156,26 @@ s32 BCTCSendMAGBase(u8 MsgType)
 	u8 tmpAmtAuthBin[4] = {0};
 	u32 tmpsdkAmtAuthBin = 0;
 
-
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_COMMUTOHOST, SDK_DISP_DEFAULT);
     sdkDispBrushScreen();
 
-    if(SDK_OK != OpenComm())
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
-
 
     ComPackSendLen = 0;
     ComPackRecvLen = 0;
@@ -2644,13 +2701,21 @@ s32 BCTCProcessAdvice(void)
 		{0},
 	};
 
-//    sdkDispClearScreen();
-//    sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_COMMUTOHOST, SDK_DISP_DEFAULT);
-//    sdkDispBrushScreen();
-
-    if(OpenComm() != SDK_OK)
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
 
     MsgType = BCTC_TRS_Notify_SEND;
@@ -2737,10 +2802,23 @@ s32 BCTCSendTransResult(s32 ret)
 		{0},
 	};
 
-    if(SDK_OK != OpenComm())
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
+
 
     MsgType = BCTC_MNG_TransResult_SEND;
 
@@ -2859,10 +2937,23 @@ s32 BCTCStartTrade(void)
 
     memset(ComPackSend, 0, sizeof(ComPackSend));
 
-    if(SDK_OK != OpenComm())
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
+
     ComPackSend[0] = MsgType;
     ComPackSendLen = 1;
 
@@ -3022,39 +3113,47 @@ s32 BCTCStartTrade(void)
 
 s32 BCTCSingleTrade(void)
 {
-    u8 *ASCComPackRecv;
-    u8 BCDComPackRecv[64];
-    s32 ASCComPackRecvLen,BCDComPackRecvLen;
+    u8 BCDComPackRecv[64]={0};
     s32 len = 0;
     u16 TlvLength = 0;
     u8 *pbTlv = NULL, *pb = NULL;
     u16 rsplen;
 
+//	Trace("BCTC", "start BCTCSingleTrade\r\n");
     memset(&gstbctcautotrade, 0, sizeof(gstbctcautotrade));
-    ASCComPackRecv = (u8*)sdkGetMem(128);
-    memset(ASCComPackRecv, 0, 128);
 
-    len = sdkCommUartRecvData(gSerialPortId, ASCComPackRecv, 128, 100);
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
+    {
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+    }
+
+    len = BCTCRecvData(BCDComPackRecv, 64);
     if(len <= 0)
     {
-        sdkFreeMem(ASCComPackRecv);
         return SDK_ERR;
     }
-    ASCComPackRecvLen = len;
 
-    TraceHex("", "ComPackRecv in ascii", ASCComPackRecv, 128);
-
-    BCDComPackRecvLen = sdkAscToBcd(BCDComPackRecv, ASCComPackRecv, ASCComPackRecvLen);
-	Trace("BCTC", "ASCComPackRecvLen = %d\r\n", ASCComPackRecvLen);
+    TraceHex("", "ComPackRecv in BCD", BCDComPackRecv, len);
 
     if((BCDComPackRecv[0] != 0x02) || (BCDComPackRecv[1] != 0X80))
     {
-        sdkFreeMem(ASCComPackRecv);
         return SDK_ERR;
     }
     TlvLength = BCDComPackRecv[2] * 256 + BCDComPackRecv[3];
     Trace("", "tlvlength=%d\n", TlvLength);
-    TraceHex("", "RecvData ", BCDComPackRecv, TlvLength + 4);
+//    TraceHex("", "RecvData ", BCDComPackRecv, TlvLength + 4);
 
     if(TlvLength >= 3)
     {
@@ -3066,7 +3165,6 @@ s32 BCTCSingleTrade(void)
 
             if(rsplen != 6)
             {
-                sdkFreeMem(ASCComPackRecv);
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
@@ -3074,6 +3172,10 @@ s32 BCTCSingleTrade(void)
             memcpy(gstbctcautotrade.amount, pb, 6);
             TraceHex("", "amount ", pb, 6);
         }
+		else
+		{
+            gstbctcautotrade.amountexit = 0;
+		}
         pbTlv = TlvSeek(&BCDComPackRecv[4], TlvLength, 0x9F03);
 
         if(pbTlv != NULL)
@@ -3082,7 +3184,6 @@ s32 BCTCSingleTrade(void)
 
             if(rsplen != 6)
             {
-                sdkFreeMem(ASCComPackRecv);
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
@@ -3090,6 +3191,10 @@ s32 BCTCSingleTrade(void)
             memcpy(gstbctcautotrade.otheramount, pb, 6);
             TraceHex("", "otheramount ", pb, 6);
         }
+		else
+		{
+            gstbctcautotrade.otheramountexit = 0;
+		}
         pbTlv = TlvSeek(&BCDComPackRecv[4], TlvLength, 0x9C);
 
         if(pbTlv != NULL)
@@ -3098,7 +3203,6 @@ s32 BCTCSingleTrade(void)
 
             if(rsplen != 1)
             {
-                sdkFreeMem(ASCComPackRecv);
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
@@ -3106,11 +3210,142 @@ s32 BCTCSingleTrade(void)
             memcpy(&gstbctcautotrade.transtype, pb, 1);
             Trace("emv", "transtype = %02X", gstbctcautotrade.transtype);
         }
+		else
+		{
+			gstbctcautotrade.typeexit = 0;
+		}
     }
-    sdkFreeMem(ASCComPackRecv);
     return SDK_OK;
 }
 
+
+void BCTCSendOutCome(void)
+{
+    u8 ComPackSend[128], ComPackRecv[16];
+    u16 ComPackSendLen, ComPackRecvLen;
+    u8 MsgType;
+	u8 flag=0x00;
+	s32 ret;
+
+    MsgType = BCTC_MNG_TermDispUI_SEND;
+
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
+    {
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+    }
+
+	ComPackSendLen = 0;
+	ComPackSend[ComPackSendLen] = MsgType;
+	Trace("BCTC", "Msgtype: %02X\r\n", MsgType);
+	Trace("BCTC", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
+	Trace("BCTC", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
+
+    ComPackSendLen++;
+	memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x29\x09", 4);
+	ComPackSendLen += 4;
+	ComPackSend[ComPackSendLen++] =	gstOutcome.Result;
+	ComPackSend[ComPackSendLen++] =	gstOutcome.Start;
+	ComPackSend[ComPackSendLen++] =	gstOutcome.OnlineResponseData;
+	ComPackSend[ComPackSendLen++] =	gstOutcome.CVM;
+	if(gstOutcome.UIRequestonOutcomePresent)
+	{
+		flag |= 0x80;
+	}
+	if(gstOutcome.UIRequestonRestartPresent)
+	{
+		flag |= 0x40;
+	}
+	if(gstOutcome.DataRecordPresent)
+	{
+		flag |= 0x20;
+	}
+	if(gstOutcome.DiscretionaryDataPresent)
+	{
+		flag |= 0x10;
+	}
+	if(gstOutcome.Receipt)
+	{
+		flag |= 0x08;
+	}
+	ComPackSend[ComPackSendLen++] =	flag;
+	ComPackSend[ComPackSendLen++] =	gstOutcome.AlternateInterfacePreference;
+	ComPackSend[ComPackSendLen++] =	gstOutcome.FieldOffRequest;
+	memcpy(ComPackSend+ComPackSendLen, gstOutcome.RemovalTimeout, 2);
+	ComPackSendLen+=2;
+
+//	ret = BCTCSendData(ComPackSend, ComPackSendLen);
+//	CloseComm();
+}
+
+void BCTCSendUIRequest(int type)
+{
+    u8 ComPackSend[128], ComPackRecv[16];
+    u16 ComPackSendLen, ComPackRecvLen;
+    u8 MsgType;
+	u8 flag=0x00;
+	s32 ret;
+
+    MsgType = BCTC_MNG_TermDispUI_SEND;
+
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
+    {
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+    }
+
+
+	ComPackSendLen = 0;
+    ComPackSend[ComPackSendLen++] = MsgType;
+	if(PURE_UIREQ_OUTCOME == type)
+	{
+		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x16\x16", 4);
+	}
+	else if(PURE_UIREQ_RESTART == type)
+	{
+		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x17\x16", 4);
+	}
+	ComPackSendLen += 4;
+	ComPackSend[ComPackSendLen++] =	gstUIRequest.MessageID;
+	ComPackSend[ComPackSendLen++] =	gstUIRequest.Status;
+	memcpy(ComPackSend+ComPackSendLen, "\x00\x00", 2);
+	ComPackSendLen += 2;
+	ComPackSend[ComPackSendLen++] =	gstUIRequest.HoldTime;
+	memcpy(ComPackSend+ComPackSendLen, "\x00\x00\x00\x00\x00\x00", 6);
+	ComPackSendLen += 6;
+	memcpy(ComPackSend+ComPackSendLen, gstUIRequest.LanguagePerference, 2);
+	ComPackSendLen += 2;
+	ComPackSend[ComPackSendLen++] = gstUIRequest.ValueQualifier;
+	memcpy(ComPackSend+ComPackSendLen, gstUIRequest.Value, 6);
+	ComPackSendLen += 6;
+	memcpy(ComPackSend+ComPackSendLen, gstUIRequest.CurrencyCode, 2);
+	ComPackSendLen += 2;
+
+//	ret = BCTCSendData(ComPackSend, ComPackSendLen);
+//	CloseComm();
+}
 
 s32 ProcessMagAuthorRQ()
 {
@@ -3321,9 +3556,21 @@ s32 PrintClose_BCTC()
 
     MsgType = BCTC_MNG_UploadEcStrip_SEND;
 
-    if(OpenComm() != SDK_OK)
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
     {
-        return SDK_ERR;
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
     }
 
 	ComPackSendLen = 0;

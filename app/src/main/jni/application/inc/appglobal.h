@@ -31,8 +31,11 @@
 #include "sdkmaths.h"
 
 #define     SDK_ICC_CARDNO_MIN_NUM  13          //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½//the minimum number of card number
-#define     SDK_ICC_TIMER_AUTO    30000         //ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Ê±ï¿½ï¿½30s   //automatically return timer 30s
+#define     SDK_ICC_TIMER_AUTO    300000         //ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Ê±ï¿½ï¿½30s   //automatically return timer 30s
 #define     SDK_ICC_TIMER_RESET   2000          // ï¿½Ç½Ó¸ï¿½Î»Ê±ï¿½ï¿½2s  //contactless reset time 2s
+
+#define	HOST_TRANS_SERIAL 0x01
+#define HOST_TRANS_WIFI   0x02
 
 
 #define MAXTRANSLOGNUM 40
@@ -60,7 +63,8 @@ EXTERN u8 gCollisionflag;	//¼ì¿¨³åÍ»±êÖ¾Î»
 EXTERN u8 gCollisionCounter;	//¼ì¿¨³åÍ»¼ÆÊýÆ÷
 EXTERN u8 gTransCurrExponent;
 EXTERN int gSerialPortId;
-
-
+EXTERN int gTCPPort;
+EXTERN u8 gTCPAddress[16];
+EXTERN u8 gHostTransType;
 
 #endif

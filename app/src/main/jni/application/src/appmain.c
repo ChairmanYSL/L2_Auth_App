@@ -75,6 +75,7 @@ s32 appmain(s32 argc, char const *argv[])
 {
     int ret;
 	s32 timeout = 0;
+//	u8 *data_uf, *data_f;
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_APPSTARTUP, SDK_DISP_DEFAULT);
@@ -98,6 +99,16 @@ s32 appmain(s32 argc, char const *argv[])
 	gTransCurrExponent = 2;//默认有两位小数
 	gSerialPortId = OpenComm();
 	Trace("lishiyao", "return portID:%d\r\n", gSerialPortId);
+	gTCPPort = 6789;
+	memset(gTCPAddress, 0, sizeof(gTCPAddress));
+	memcpy(gTCPAddress, "192168250093", 12);
+	gHostTransType = HOST_TRANS_SERIAL;
+
+//	data_uf = convertToCString(gTCPAddress, 16);
+//	data_f = formatIPAddress(data_uf);
+//	Trace("lishiyao", "before removeLeadingZeros IP:%s\r\n", data_f);
+//	removeLeadingZeros(data_f);
+//	sdkOpenWifi(data_f, gTCPPort);
 
     AppSysmain();
 

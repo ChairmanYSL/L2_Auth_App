@@ -67,9 +67,6 @@
 #define SDK_UI_VALUEQUALIFIER_NA		0x00
 #define SDK_UI_VALUEQUALIFIER_BALANCE 	0x20
 
-#define SDK_UIREQ_OUTCOME	0x01
-#define SDK_UIREQ_RESTART	0x02
-
 typedef struct
 {
 	unsigned char Result;
@@ -91,7 +88,7 @@ typedef struct
 	unsigned char MessageID;
 	unsigned char Status;
 	unsigned char HoldTime;
-	unsigned char LanguagePerference[8];
+	unsigned char LanguagePerference[2];
 	unsigned char ValueQualifier;
 	unsigned char Value[6];
 	unsigned char CurrencyCode[2];
@@ -101,5 +98,8 @@ extern s32 sdkSetOutcomeParam(u8 Result, u8 Start, u8 CVM, u8 UIRequestonOutcome
 extern int sdkSendOutcome();
 extern s32 sdkSetUIRequestParam(u8 MessageID, u8 Status, u8 HoldTime, u8 *LanguagePerference, u8 ValueQualifier, u8 *Value, u8 *CurrencyCode);
 extern int sdkSendUIRequest();
+
+extern SDKOUTCOMEPARAM gstOutcome;
+extern SDKUIREQUESTPARAM gstUIRequest;
 
 #endif

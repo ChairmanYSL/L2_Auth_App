@@ -1,7 +1,6 @@
 #include "sdkGlobal.h"
 
 
-void sdkKbKeyFlush (void);
 s32 sdkKbGetKey(void);
 s32 sdkKeyOpen(void);
 
@@ -1954,32 +1953,21 @@ s32 sdkIsMultiLang(void)
 s32 sdkKbGetScanfEx(const s32 siOvertime, u8 *pheOut, const s32 siMinLen, const s32 siMaxLen, const u32 uiMode, const s32 siDispRow, s32 (*psdkCallFun)(u8 *pStrDisp, const u32 uiMode, const s32 siDispRow, void *pVar), void *pVarible, u32 siFirstMode)
 {
     SDK_KEY_SCANFMT *pScan;
-
     s32 rslt = 0;
-
-    //Ŀǰ��������ڳ�ʼ��ʱ��Ĭ�����ã�������뷨�Ժ���Ҫ֧���ڶ��ֶ������֮������л���
-    //�����л�֮ǰ��Ҫ��������������Ϣ�����˳����뷨֮�󣬻ָ�֮ǰ������������Ϣ
-
     s32 lang, line;
 
-    //��������ж� ʯ���� 2012.08.20 10:46
     if(pheOut == NULL  || siMinLen > SDK_MAX_STR_LEN || siMaxLen > SDK_MAX_STR_LEN || siMinLen > siMaxLen  || (!(siDispRow  < SDK_DISP_LINE_MAX)) || 0 == siMaxLen)
     {
-        Assert(0);
+		Trace("test", "error flag1\r\n");
         return SDK_PARA_ERR;
     }
 
-    /*=======BEGIN: wangmingming 2014.07.11  14:53 modify===========*/
-    //�����뷨Ϊ��������ʱ������ʹ�����һ����Ϊ�����ʾ�У�ֱ�ӷ��ز�������
-    //��Ϊ��������ʱ�����һ����Ϊ��ѡ������ʾ��
     if ((SDK_DISP_LINE5 == siDispRow))
     {
-        Trace("test", ">>> uiMode=%d, siFirstMode=%d\r\n", uiMode, siFirstMode);
-
         if ( ((uiMode & SDK_MMI_SYMBOL) == SDK_MMI_SYMBOL) ||
              ((siFirstMode & SDK_MMI_SYMBOL) == SDK_MMI_SYMBOL) )
         {
-            Assert(0);
+			Trace("test", "error flag2\r\n");
             return SDK_PARA_ERR;
         }
     }
@@ -1987,23 +1975,21 @@ s32 sdkKbGetScanfEx(const s32 siOvertime, u8 *pheOut, const s32 siMinLen, const 
 
     pScan = (SDK_KEY_SCANFMT *)sdkGetMem(sizeof(SDK_KEY_SCANFMT));         //�����ڴ�
 
-    if(pScan == NULL) //ʯ���� 2012.08.20 10:46
+    if(pScan == NULL)
     {
-        Assert(0);
+		Trace("test", "error flag3\r\n");
         return SDK_ERR;
     }
     memset(pScan, 0, sizeof(SDK_KEY_SCANFMT));
 
 
-    //ȥ������һ��0x80 �������������ʾ��Ϣ�Ķ��� shiweisong 2013.02.22 14:20
     if(pheOut[0] > siMaxLen) //shijianglong 2013.02.22 10:4�������ߵƽ������Ӵ��ж�
     {
-        Assert(0);
+		Trace("test", "error flag4\r\n");
         sdkFreeMem(pScan);
         return SDK_PARA_ERR;
     }
 
-    /*���pheoutΪ0����δ���*/
     pScan->Contents[0] = pheOut[0];
     memcpy(&pScan->Contents[1], &pheOut[1], pheOut[0]);
 
@@ -2022,7 +2008,6 @@ s32 sdkKbGetScanfEx(const s32 siOvertime, u8 *pheOut, const s32 siMinLen, const 
     if(true == sdkIsMultiLang())
     {
         Trace("fsp", "reay sdkMmiMultiConver");
-        //rslt = sdkMmiMultiConver((u32)siOvertime, pScan);
         rslt = SDK_ERR;
     }
     else
@@ -2030,21 +2015,14 @@ s32 sdkKbGetScanfEx(const s32 siOvertime, u8 *pheOut, const s32 siMinLen, const 
         rslt = sdkConverScanf((u32)siOvertime, pScan);
     }
 
-    if(rslt == SDK_KEY_ENTER || rslt == SDK_KEY_FUNCTION /* || MODE_HAND == rslt*/)
+    if(rslt == SDK_KEY_ENTER || rslt == SDK_KEY_FUNCTION)
     {
         memset(&pheOut[1], 0, pheOut[0]); //tjb 2014.06.04 9:29 ��pheOut�г�ֵʱ���������
         pheOut[0] = (u8)strlen(pScan->Contents);
         memcpy(&pheOut[1], pScan->Contents, pheOut[0]);
     }
+
     sdkFreeMem(pScan);
-#if 0 /*Modify by zcl at 2016.02.16  14:27 */
-
-    /*=======BEGIN: fusuipu 2013.12.15  17:28 modify �ָ�ϵͳ����������Ϣ===========*/
-    sdkSysSetLang(lang);
-    sdkDispSetMaxRow(line);
-    /*====================== END======================== */
-#endif /* if 0 */
-
     return rslt;
 }
 

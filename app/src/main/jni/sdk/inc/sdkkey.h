@@ -127,7 +127,6 @@ typedef struct
 ±ê×¼°æStandard Version
 **********************************************************************/
 extern s32 sdkKbGetKey(void);
-extern void sdkKbKeyFlush (void);
 extern s32 sdkKbWaitKey(u32 uiMask ,s32 sims);
 extern s32 sdkKbGetCombinedKey(void);//shijianglong 2013.05.09 14:17
 extern s32 sdkSysGetSysKeytab(u8 *poutkeytab, s32 siTabSize);

@@ -141,6 +141,7 @@ extern signed int BCTCSendConfirm(void);
 extern signed int BCTCProcessAdvice();
 extern signed int BCTCSendReversal();
 extern signed int BCTCSendTransResult(signed int ret);
-
+extern void BCTCSendOutCome(void);
+extern void BCTCSendUIRequest(int type);
 #endif
 

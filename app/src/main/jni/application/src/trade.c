@@ -866,7 +866,25 @@ void ImportTradeAmount()
     u8 AmountOther[6] = {0};
     sdkAscToBcdR(Amount, gstasAmount, 6);
 	TraceHex("app", "amount in BCD=", Amount,6);
-    sdkEMVBaseSetTwoTransAmount(Amount, gbcOtherAmount);
+
+	sdkEMVBaseSetTwoTransAmount(Amount, gbcOtherAmount);
+	if(0 == gstbctcautotrade.amountexit)
+	{
+		sdkEMVBaseDelTLV("\x9F\x02");
+	}
+	if(0 == gstbctcautotrade.otheramountexit)
+	{
+		sdkEMVBaseDelTLV("\x9F\x03");
+	}
+	Trace("app", "typeexit = %d\r\n", gstbctcautotrade.typeexit);
+	if(1 == gstbctcautotrade.typeexit)
+	{
+		sdkEMVBaseConfigTLV("\x9C", &(gstbctcautotrade.transtype), 1);
+	}
+	else
+	{
+		sdkEMVBaseDelTLV("\x9C");
+	}
 }
 
 s32 IccDispCandAppListCb(u8 ucCandAppNum, u8 **pheCandApp)
@@ -1157,6 +1175,8 @@ s32 DealTrade(void)
 	_SimData SimData;
 	SDK_EMVBASE_CL_HIGHESTAID tempaid = {0};
 	u8 FlowContinueFlag = 1;
+	u8 AmountBCD[6], Passwd[64];
+	s32 len;
 
 	gCollisionflag = 0;
 	gCollisionCounter = 0;
@@ -1173,7 +1193,9 @@ _RETRY:
 	memset(gstResponseCode,0,sizeof(gstResponseCode));
 
 	sdkEMVBaseTransInit();
-	ImportTradeAmount();
+	sdkPureTransInit();
+	sdkPureSetSendOutcome(BCTCSendOutCome);
+	sdkPureSetSendUIRequest(BCTCSendUIRequest);
 
 	while(1)
 	{
@@ -1186,6 +1208,7 @@ _RETRY:
 		}
 		else if(SDK_EQU == ret)
 		{
+			sdkTestIccDispText("Multi Card Collision");
 			sdkIccPowerDown();
 			sdkmSleep(1000);
 		}
@@ -1200,16 +1223,31 @@ _RETRY:
 		}
 	}
 
+	ImportTradeAmount();
+
 	while(FlowContinueFlag)
 	{
 		ret = sdkPureTransFlow();
+		Trace("app", "sdkPureTransFlow ret = %d\r\n", ret);
 		switch (ret)
 		{
-			case EMV_STA_APP_SELECTED:
+			case EMV_REQ_PREPROCESS_LOADAIDPARAM:
 				IccSetAIDEX();
 				break;
 
-			case SDK_EMV_TransOnlineWait:
+			case EMV_REQ_ONLINE_PIN:
+				sdkEMVBaseReadTLV("\x9F\x02", AmountBCD, &len);
+				if(SDK_OK == InputIccCreditPwd(ICCONLINEPIN, 3, Passwd))
+				{
+					sdkPureSetInputPINRes(0, Passwd+1, Passwd[0]);
+				}
+				else
+				{
+					sdkPureSetInputPINRes(-1, Passwd+1, Passwd[0]);
+				}
+				break;
+
+			case EMV_REQ_GO_ONLINE:
 				ret = SendOnlineBag();
 				if(ret != SDK_OK)
 				{
@@ -1224,50 +1262,50 @@ _RETRY:
 				sdkEMVBaseReadTLV("\x8A", rspcode, &ret);
 				TraceHex("app", "after sdkPureImportOnlineResult 8A", rspcode, 2);
 				break;
-			case SDK_EMV_TransOnlineApprove:
+			case EMV_ACCEPTED_ONLINE:
 				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Approve");
 				FlowContinueFlag = 0;
 				break;
 
-			case SDK_EMV_TransOnlineDecline:
+			case EMV_DENIALED_ONLINE:
 				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Decline");
 				FlowContinueFlag = 0;
 				break;
 
-			case SDK_EMV_TransOfflineApprove:
+			case EMV_ACCEPTED_OFFLINE:
 				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Offline Approve");
 				FlowContinueFlag = 0;
 				break;
 
-			case SDK_EMV_TransOfflineDecline:
+			case EMV_DENIALED_OFFLINE:
 				sdkTestIccDispText("Offline Decline");
 				FlowContinueFlag = 0;
 				break;
 
-			case SDK_EMV_SwitchInterface:
+			case EMV_SWITCH_INTERFACE:
 				sdkIccPowerDown();
 				sdkIccCloseRfDev();
 				sdkTestIccDispText("Switch Interface");
 				FlowContinueFlag = 0;
 				break;
 
-			case SDK_EMV_NotAccept:
-				sdkTestIccDispText("End Application");
+			case EMV_SEEPHONE:
+				sdkIccPowerDown();
+				sdkIccCloseRfDev();
+				sdkTestIccDispText("See Phone");
 				FlowContinueFlag = 0;
 				break;
 
-			case SDK_EMV_SeePhone:
-			case SDK_EMV_TORN:
-			case SDK_EMV_ReadCardAgain:
+			case EMV_STA_TORNRECOVER:
+			case EMV_REQ_READCAARD_AGAIN:
 				sdkIccPowerDown();
 				sdkmSleep(900); // 1000
 				goto _RETRY;
 
-			case SDK_EMV_AppTimeOut:
-			case SDK_EMV_IccCommandErr:
+			case EMV_ENDAPPLICATION:
 				sdkIccPowerDown();
 				sdkIccCloseRfDev();
 				sdkTestIccDispText("End Application");

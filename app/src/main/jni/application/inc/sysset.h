@@ -77,6 +77,7 @@ typedef struct
 {
 	unsigned char AidLen;
     unsigned char Aid[16];
+	unsigned char TransType;
     unsigned char TransCurcyCode[2];             //tag'5F2A'
     unsigned char TransCurcyExp;                 //tag'5F36'
     unsigned char TransReferCurcyCode[2];        //tag'9F3C'

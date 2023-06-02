@@ -14,6 +14,7 @@
 #define PURE_ERR_READCARDAGAIN		59		//communicate with card error,read card again
 #define PURE_REQ_INPUTPIN			60
 #define PURE_REQ_CHECKREVOKEY		61
+#define PURE_REQ_LOADAIDPARAM		62
 
 #define PURE_CVMMETHOD_DEFAULT  				0x3F
 #define PURE_CVMMETHOD_NOCVMPERFORMED 			0x1F
@@ -92,6 +93,7 @@ typedef struct
 	unsigned char FCIIn1stSelect[255];	//record 1st FCI of select response for compare 2nd FCI of select when trans goto online deal or echo torn deal
 	unsigned char FCIIn1stSelectLen;
 	unsigned char FCIDifferFlag;		//1-: 1st select FCI and 2nd select FCI content different
+	unsigned char FCIParseErrorFlag;	//0-:FCI template present and parse correct;1-:FCI parse error;2-:FCI dont be obtained
 }PURETRADEPARAMETER;;
 
 
@@ -108,8 +110,9 @@ typedef void (*PURE_SendUIRequest)(int type);
 typedef unsigned char (*PURE_GetInputPINRes)(void);
 typedef int (*PURE_GetVerifyCardNoRes)(void);
 typedef int(*PURE_GetVerifyRevocationKeyRes)(void);
-typedef unsigned char(*PURE_CheckCAPKExist)(EMVBASE_CAPK_STRUCT *CAPK);
+typedef unsigned char(*PURE_CheckCAPKExist)(PURETRADEPARAMETER *EMVTradeParam);
 typedef int(*PURE_GetTransAmtSumRes)(void);
+typedef unsigned char(*PURE_Preprocess)(PURETRADEPARAMETER *EMVTradeParam);
 
 typedef struct{
 
@@ -130,6 +133,7 @@ typedef struct{
 	PURE_GetVerifyRevocationKeyRes GetVerifyRevocationKeyRes;
 	PURE_CheckCAPKExist CheckCapkExist;
 	PURE_GetTransAmtSumRes GetTransAmtSumRes;
+	PURE_Preprocess Preprocess;
 }PURETradeUnionStruct;
 
 typedef struct

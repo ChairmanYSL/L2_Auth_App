@@ -12,76 +12,25 @@
 #include "devApi.h"
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <string.h>
 
 
 
 #define  LOG_TAG    "PUREEMVCORE"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
-extern DDI_API gstddiapi;
 
-
-extern bool sdkIsBcdNum(u8 const *pheSrc, s32 siSrclen);
-
-int sdkGetRtc(unsigned char *pbcDest)
+int sdkIccCloseRfDev(void)
 {
-    if(NULL == pbcDest)
-    {
-        return SDK_PARA_ERR;
-    }
-    ddi_sys_get_time(pbcDest);
-
-    if(sdkIsBcdNum(pbcDest, 6))
-    {
-        return SDK_OK;
-    }
-    else
-    {
-        return SDK_PARA_ERR;
-    }
+	return 0;
 }
 
-void sdkmSleep(const int siMs)
+
+int sdkIccDispRfLogo()
 {
-	usleep(siMs);
+	return 0;
 }
 
-int sdkGetRandom(unsigned char *pheRdm, int siNum)
-{
-	gstddiapi.ddi_get_random(pheRdm, siNum);
-	TraceHex("ddi", "random:", pheRdm, siNum);
-    return SDK_OK;
-}
-
-int sdkReadPosSn(unsigned char *pasDest)
-{
-    if(pasDest == NULL)
-    {
-        return SDK_PARA_ERR;
-    }
-    return 0;
-}
-
-void *sdkGetMem(unsigned int size)
-{
-	return ddi_k_malloc(size);
-}
-
-int sdkFreeMem(void *ap )
-{
-    ddi_k_free(ap);
-    return 1;
-}
-
-int sdkSysGetCurAppDir(unsigned char *pasData)
-{
-    if(NULL == pasData) //shijianglong 2013.01.30 15:58
-    {
-        return SDK_PARA_ERR;
-    }
-    strcpy(pasData, "/data/local/config/app/");
-    return SDK_OK;
-}
 
 int sdkKbGetKey(void)
 {
@@ -94,230 +43,6 @@ int sdkKbGetKey(void)
 
     return tmpkey;
 }
-
-int sdkIccCloseRfDev(void)
-{
-	return 0;
-}
-
-int sdkIccDispRfLogo()
-{
-	return 0;
-}
-
-s32 sdkemvbaseInitDDI(void)
-{
-	void* pHandler;
-
-	pHandler = dlopen("libAsdkClient_8623.so", RTLD_LAZY);
-	if(pHandler == NULL)
-	{
-		Trace("lishiyao", "ddi-fatal:open libAsdkClient_8623.so fail\n");
-		pHandler = dlopen("/system/lib/libAsdkClient.so", RTLD_LAZY);
-		if(pHandler == NULL)
-		{
-			Trace("lishiyao", "ddi-fatal:open /system/lib/libAsdkClient.so fail\n");
-			return -1;
-		}
-	}
-
-	gstddiapi.ddi_apdu_exchange = dlsym(pHandler,"API_ICC_Apdu");
-	gstddiapi.ddi_get_random= dlsym(pHandler,"API_Rng");
-	gstddiapi.ddi_get_timerId= dlsym(pHandler,"API_TimeGet");
-	gstddiapi.ddi_encry = dlsym(pHandler,"API_Crypt");
-	gstddiapi.ddi_hash = dlsym(pHandler,"API_Hash");
-	return 0;
-}
-
-
-
-s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, s32 siInLen, u8 *pheOutBuf, s32 *psiOutLen, u32 *sw)
-{
-    s32 ret = 0;
-	u32 size = 512;
-//	u32 sw = 0;
-
-    if((NULL == pheInBuf) || (NULL == pheOutBuf) || (NULL == psiOutLen) || siInLen < 0)
-    {
-        return SDK_PARA_ERR;
-    }
-
-	TraceHex("apdu", "pheInBuf:", pheInBuf, siInLen);
-
-	ret = gstddiapi.ddi_apdu_exchange(2, pheInBuf, (u32)siInLen,pheOutBuf, size, (u32 *)psiOutLen, sw);
-
-	Trace("extern", "ddi_apdu_exchange ret = %d\r\n", ret);
-
-    if(ret == DDI_OK)
-    {
-		Trace("apdu", "psiOutLen = %d\r\n", *psiOutLen);
-    	TraceHex("emv", "contactless r-apdu:", pheOutBuf, *psiOutLen);
-        return SDK_OK;
-    }
-
-    return SDK_ERR;
-}
-
-
-#define DDI_OK 0
-
-#define SDK_MAX_PATH                40
-
-s32 sdkInsertFile(const u8 *pasFile, const u8 *pheSrc, s32 siStart, s32 siSrclen)
-{
-	s32 fp,i,ret;
-
-    if (NULL == pasFile || NULL == pheSrc || siStart < 0 || siSrclen < 0) {
-		Trace("file", "flag1\r\n");
-		return SDK_PARA_ERR;
-    }
-
-    if (siStart != 0)
-	{
-        i = sdkGetFileSize(pasFile);
-        if (siStart > i && i > 0)
-        {
-			Trace("file", "siStart = %d\r\n", siStart);
-			Trace("file", "i = %d\r\n", i);
-			Trace("file", "flag2\r\n");
-            return SDK_PARA_ERR;
-   		}
-    }
-	Trace("ddi", "want open file:%s", pasFile);
-	fp = fopen(pasFile, "rb+");
-	if((NULL == fp) && (sdkGetFileSize(pasFile) <= 0))//file doesn't exist
-	{
-		fp = fopen(pasFile, "wb+");
-		if(fp == NULL)
-		{
-			Trace("ddi", "open file error\r\n");
-			return SDK_ERR;
-		}
-		else
-		{
-			fclose(fp);
-			fp = fopen(pasFile, "rb+");
-		}
-	}
-	Trace("ddi", "siStart = %d\r\n", siStart);
-	fseek(fp, 0, SEEK_END);
-	i = ftell(fp);
-	if (siStart > i)
-	{
-		fclose(fp);
-		Trace("file", "flag3\r\n");
-		return SDK_PARA_ERR;
-	}
-	fseek(fp, siStart, SEEK_SET);
-
-	ret = fwrite(pheSrc, sizeof(u8), siSrclen, fp);
-	Trace("ddi", "fwrite ret = %d\r\n", ret);
-	Trace("ddi", "siSrclen = %d\r\n");
-//	if(siSrclen <= 1024)
-//	{
-//		TraceHex("ddi", "write content:", pheSrc, siSrclen);
-//	}
-	Trace("ddi", "flow flag1\r\n");
-	if(ret == siSrclen)
-	{
-		Trace("ddi", "flow flag2\r\n");
-		fclose(fp);
-		return SDK_OK;
-	}
-	else
-	{
-		fclose(fp);
-		return SDK_ERR;
-	}
-}
-
-s32 sdkReadFile(const u8 *pasFile, u8 *pheDest, s32 siOffset, s32 *psiDestlen)
-{
-	s32 fp;
-	u32 i;
-
-    if (NULL == pasFile || NULL == pheDest || NULL == psiDestlen || siOffset < 0)
-	{
-        return SDK_PARA_ERR;
-    }
-
-	fp = fopen(pasFile, "rb+");
-	if(fp == NULL)
-	{
-		Trace("lishiyao", "open file error!\r\n");
-		return SDK_FUN_NULL;																						//�ļ���ʧ��
-	}
-
-    if( 0 != fseek(fp, siOffset, SEEK_SET) )
-    {
-        fclose(fp);
-        return SDK_FILE_EOF;
-    }
-
-	i = *psiDestlen;
-	*psiDestlen = fread(pheDest, sizeof(u8), i, fp);
-	Trace("lishiyao", "act read len = %d\r\n", *psiDestlen);
-	if(*psiDestlen != i) //consider it as get end of file
-	{
-		fclose(fp);
-		return SDK_ERR;
-	}
-	else
-	{
-		fclose(fp);
-		return SDK_OK;
-	}
-}
-
-s32 sdkGetFileSize(const u8 *pasFile)
-{
-	s32 fileSize;
-	s32 fp;
-
-	if (NULL == pasFile)
-	{
-		return SDK_PARA_ERR;
-	}
-
-	fp = fopen(pasFile, "rb+");
-	if(NULL == fp)
-	{
-		return SDK_FUN_NULL;																						//�ļ���ʧ��
-	}
-
-	fseek(fp, 0, SEEK_END);
-
-	fileSize = ftell(fp);
-
-	fclose(fp);
-
-//	Trace("lishiyao", "sdkGetFileSize file size:%d\r\n", fileSize);
-	return fileSize;
-}
-
-s32 sdkDelFile(const u8 *pasFile)
-{
-	s32 ret;
-
-	if(pasFile == NULL)
-	{
-		return SDK_PARA_ERR;
-	}
-
-	ret = remove(pasFile);
-	Trace("lishiyao", "want del file:%s\r\n", pasFile);
-	Trace("lishiyao", "remove ret = %d\r\n", ret);
-	if(ret == 0)
-	{
-		return SDK_OK;
-	}
-	else
-	{
-		return SDK_ERR;
-	}
-}
-
-
 
 int beeper(int timer){
 	return 0;
@@ -341,7 +66,7 @@ bool  sdkSysBeep(int eType)
 }
 
 void sdkDispClearScreen(){
-    clearLcdLine(0, 4);
+    clearLcdLine(0, 5);
 }
 int sdkDispFillRowRam(int siRow, int siColid, const unsigned char *pasStr, unsigned int ucAtr){
 
@@ -447,7 +172,7 @@ void AddTestCardAID(void)
 	memset(&extempAid, 0, sizeof(APPEX_AID_STRUCT));
 	memcpy(extempAid.Aid, "\xA0\x00\x00\x02\x80\x20\x10", 7);
 	extempAid.AidLen = 7;
-	memcpy(extempAid.TransCurcyCode, appex_aid_list[0].TransCurcyCode, 2);
+	memcpy(extempAid.TransCurcyCode, "\x09\x78", 2);
 	extempAid.TransCurcyExp = appex_aid_list[0].TransCurcyExp;
 	memcpy(extempAid.TransReferCurcyCode, appex_aid_list[0].TransReferCurcyCode, 2);
 	extempAid.TransReferCurcyExp = appex_aid_list[0].TransReferCurcyExp;
@@ -463,16 +188,128 @@ void AddTestCardAID(void)
 	memcpy(extempAid.terminalcapability, appex_aid_list[0].terminalcapability, 3);
 	extempAid.terminaltype = appex_aid_list[0].terminaltype;
 	memcpy(extempAid.RemovalTimeout, appex_aid_list[0].RemovalTimeout, 2);
-	extempAid.Implementation = appex_aid_list[0].Implementation;
+	extempAid.Implementation = 0x2C;
 	extempAid.ZeroAmtAllowFlag = appex_aid_list[0].ZeroAmtAllowFlag;
 	extempAid.StatusCheckFlag = appex_aid_list[0].StatusCheckFlag;
-	memcpy(extempAid.CLAppCap, appex_aid_list[0].CLAppCap, 5);
+	memcpy(extempAid.CLAppCap, "\x36\x00\x00\x02\xE9", 5);
 	memcpy(extempAid.ATOL, appex_aid_list[0].ATOL, 64);
 	extempAid.ATOLLen = appex_aid_list[0].ATOLLen;
-	memcpy(extempAid.MTOL, appex_aid_list[0].MTOL, 64);
+	memcpy(extempAid.MTOL, "\x8C\x00\x00\x57\x00\x00", 64);
 	extempAid.MTOLLen = appex_aid_list[0].MTOLLen;
 	memcpy(extempAid.ATDTOL, appex_aid_list[0].ATDTOL, 64);
 	extempAid.ATDTOLLen = appex_aid_list[0].ATDTOLLen;
 
 	AddAPPEXAID(&extempAid);
+}
+
+unsigned int convertToUnsignedInt(const unsigned char* data, int length)
+{
+    unsigned int result = 0;
+	int i;
+
+    for(i = 0; i < length; i++)
+	{
+        result = result * 10 + (data[i] - '0');
+    }
+    return result;
+}
+
+const char* convertToCString(const unsigned char* data, int length)
+{
+    char* cString = (char*)malloc(length + 1);
+    memcpy(cString, data, length);
+    cString[length] = '\0';
+    return cString;
+}
+
+const char* formatIPAddress(const char* cString)
+{
+    int len = strlen(cString);
+    char formattedString[16] = {0};  // 最大IP地址长度为15，加上结尾的'\0'
+    int formattedIndex = 0;
+	int i;
+
+    for(i = 0; i < len; i += 3)
+	{
+        if (i > 0)
+		{
+            formattedString[formattedIndex++] = '.';
+        }
+        formattedString[formattedIndex++] = cString[i];
+        formattedString[formattedIndex++] = cString[i + 1];
+        formattedString[formattedIndex++] = cString[i + 2];
+    }
+    formattedString[formattedIndex] = '\0';
+    return strdup(formattedString);
+}
+
+void removeLeadingZeros(char* ipAddress) {
+    if (ipAddress == NULL) {
+        return;
+    }
+
+    int len = strlen(ipAddress);
+    char* delimiter = ".";
+    char* token = strtok(ipAddress, delimiter);
+    int firstToken = 1;
+
+    while (token != NULL) {
+        int value = atoi(token);
+        char strippedValue[4];
+        sprintf(strippedValue, "%d", value);
+
+        // 移除无意义的前导零
+        char trimmedValue[4];
+        sprintf(trimmedValue, "%d", value);
+
+        if (firstToken) {
+            strcpy(ipAddress, trimmedValue);
+            firstToken = 0;
+        } else {
+            strcat(ipAddress, ".");
+            strcat(ipAddress, trimmedValue);
+        }
+
+        token = strtok(NULL, delimiter);
+    }
+}
+
+
+
+unsigned char IntBitMapLen(int num)
+{
+	unsigned char i;
+
+	for(i = 0; i < 10; i++)
+	{
+		if(num / 10 > 0)
+		{
+			num /= 10;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	return i+1;
+}
+
+void SendTCPTest(void)
+{
+	u8 data[] = "\x11\x22\x33\x44";
+
+	BCTCSendData(data, 4);
+}
+
+void HostOutcomeTest(void)
+{
+	sdkSetOutcomeParam(SDK_OUTCOME_RESULT_TRYAGAIN, SDK_OUTCOME_START_B, SDK_OUTCOME_CVM_NA, 1, 1, 0, 0, SDK_OUTCOME_AIP_NA, 0, 0x13, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+	BCTCSendOutCome();
+	sdkmSleep(5000);
+	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_PROCESSINGERR, 0x13, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+	BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+	sdkmSleep(5000);
+	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+	BCTCSendUIRequest(PURE_UIREQ_RESTART);
 }

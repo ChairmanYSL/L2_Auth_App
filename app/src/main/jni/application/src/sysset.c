@@ -1948,15 +1948,26 @@ void AddAPPEXAID(APPEX_AID_STRUCT *extempAid)
 	{
 		return;
 	}
+
 	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
 	{
-		if(appex_aid_list[i].AidLen == extempAid->AidLen && memcmp(appex_aid_list[i].Aid,extempAid->Aid,extempAid->AidLen) == 0)
+        if((appex_aid_list[i].AidLen == extempAid->AidLen) && (memcmp(appex_aid_list[i].Aid,extempAid->Aid,extempAid->AidLen) == 0) && (appex_aid_list[i].TransType == extempAid->TransType))
 		{
 			memcpy(&appex_aid_list[i],extempAid,sizeof(APPEX_AID_STRUCT));
 			SaveAPPEXAID();
 			return;
 		}
 	}
+
+//	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
+//	{
+//		if(appex_aid_list[i].AidLen == extempAid->AidLen && memcmp(appex_aid_list[i].Aid,extempAid->Aid,extempAid->AidLen) == 0)
+//		{
+//			memcpy(&appex_aid_list[i],extempAid,sizeof(APPEX_AID_STRUCT));
+//			SaveAPPEXAID();
+//			return;
+//		}
+//	}
 	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
 	{
 		if(appex_aid_list[i].AidLen == 0)
@@ -1996,6 +2007,10 @@ s32 IccSetAIDEX()
     u8 aidinterm[16] = {0};
     s32 aidintermlen = 0;
     Trace("pure-info","comes to before GPO set\r\n");
+	_SimData Simdata={0};
+	u8 Transtype, StatusCheckFlag, ZeroAmtAllowFlag;
+	s32 len;
+	s32 ret;
 
     sdkEMVBaseReadTLV("\x9f\x06", aidinterm, &aidintermlen);
 
@@ -2003,36 +2018,56 @@ s32 IccSetAIDEX()
     {
         return SDK_OK;
     }
+    sdkEMVBaseReadTLV("\x9C", &Transtype, &len);
+	Trace("SetBeforeGPO", "TransType in Tag: %02X\r\n ", Transtype);
+	Trace("SetBeforeGPO", "aidintermlen in Tag: %d\r\n ", aidintermlen);
+	TraceHex("SetBeforeGPO", "aid in Tag: ", aidinterm, aidintermlen);
 
-    for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
+	Trace("SetBeforeGPO", "find %d appex aid\r\n ", sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT));
+	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
     {
-        if(appex_aid_list[i].AidLen == aidintermlen && memcmp(appex_aid_list[i].Aid,aidinterm,aidintermlen) == 0)
+		Trace("SetBeforeGPO", "TransType in Extern AID: %02X\r\n ", appex_aid_list[i].TransType);
+		Trace("SetBeforeGPO", "AidLen in Extern AID: %d\r\n ", appex_aid_list[i].AidLen);
+		TraceHex("SetBeforeGPO", "aid in Extern AID: ", appex_aid_list[i].Aid, appex_aid_list[i].AidLen);
+
+		if((appex_aid_list[i].AidLen == aidintermlen) && (memcmp(appex_aid_list[i].Aid,aidinterm,aidintermlen) == 0) && (appex_aid_list[i].TransType == Transtype))
         {
-			emvbase_avl_createsettagvalue(EMVTAG_TransCurcyCode, (termaidparam+i) ->TransCurcyCode, 2);
+			sdkEMVBaseConfigTLV("\x5F\x2A", (termaidparam+i) ->TransCurcyCode, 2);
 			TraceHex("SetBeforeGPO", "TransCurcyCode ", (termaidparam + i)->TransCurcyCode, 2);
 
-			emvbase_avl_createsettagvalue(EMVTAG_JCBRemovalTimeout, (termaidparam + i)->RemovalTimeout, 2);
+			sdkEMVBaseConfigTLV("\xFF\x81\x79", (termaidparam + i)->RemovalTimeout, 2);
 			TraceHex("SetBeforeGPO", "Removal Timeout ", (termaidparam + i)->RemovalTimeout, 2);
 
-			emvbase_avl_createsettagvalue(EMVTAG_PUREStatusCheckSupportFlag, &((termaidparam + i)->StatusCheckFlag), 1);
-			Trace("SetBeforeGPO", "StatusCheckFlag: %d\r\n", (termaidparam + i)->StatusCheckFlag);
+			StatusCheckFlag = (termaidparam + i)->StatusCheckFlag;
+			ret = sdkEMVBaseConfigTLV("\x1F\x02", &StatusCheckFlag, 1);
+			Trace("SetBeforeGPO", "StatusCheckFlag: %d\r\n", StatusCheckFlag);
+			Trace("SetBeforeGPO", "sdkEMVBaseConfigTLV ret: %d\r\n", ret);
 
-			emvbase_avl_createsettagvalue(EMVTAG_PUREZeroAmountAllowedFlag, &((termaidparam + i)->ZeroAmtAllowFlag), 1);
-			Trace("SetBeforeGPO", "ZeroAmtAllowFlag: %d\r\n", (termaidparam + i)->ZeroAmtAllowFlag);
+			ZeroAmtAllowFlag = (termaidparam + i)->ZeroAmtAllowFlag;
+			ret = sdkEMVBaseConfigTLV("\xDF\x22", &ZeroAmtAllowFlag, 1);
+			Trace("SetBeforeGPO", "ZeroAmtAllowFlag: %d\r\n", ZeroAmtAllowFlag);
+			Trace("SetBeforeGPO", "sdkEMVBaseConfigTLV ret: %d\r\n", ret);
 
-			emvbase_avl_createsettagvalue(EMVTAG_PUREKernelCap, (termaidparam + i)->CLAppCap, 5);
+			sdkEMVBaseConfigTLV("\xDF\x83\x08", (termaidparam + i)->CLAppCap, 5);
 			TraceHex("SetBeforeGPO", "Contactless application Capabilities ", (termaidparam + i)->CLAppCap, 5);
 
-			sdkPureSetOption((termaidparam + i)->Implementation);
-			Trace("SetBeforeGPO", "Implementation: %d\r\n", (termaidparam + i)->Implementation);
+			sdkPureSetImplementation((termaidparam + i)->Implementation);
+			Trace("SetBeforeGPO", "Implementation: %02x\r\n", (termaidparam + i)->Implementation);
 
-			emvbase_avl_createsettagvalue(EMVTAG_PUREMTOL, (termaidparam + i)->MTOL, (termaidparam + i)->MTOLLen);
+			sdkPureSetMTOL((termaidparam + i)->MTOL, (termaidparam + i)->MTOLLen);
 			TraceHex("SetBeforeGPO", "MTOL ", (termaidparam + i)->MTOL, (termaidparam + i)->MTOLLen);
 
 			break;
         }
     }
 
+	ReadSimData(&Simdata);
+	sdkEMVBaseConfigTLV("\x9F\x1A", Simdata.TermCountryCode, 2);
+	TraceHex("SetBeforeGPO", "TermCountryCode", Simdata.TermCountryCode, 2);
+	sdkEMVBaseConfigTLV("\x5F\x2A", Simdata.TransCurrencyCode, 2);
+	TraceHex("SetBeforeGPO", "TransCurrencyCode", Simdata.TransCurrencyCode, 2);
+
+	Trace("pure-info","finish before GPO set\r\n");
     return SDK_OK;
 }
 
@@ -2136,4 +2171,95 @@ s32 sdkDispPrintData(void)
         break;
     }
   }
+}
+
+void PostSetTCPSetting(void)
+{
+	u8 IPAddress[13], port[6];
+	s32 ret,i,j,len;
+	u8 *data_uf, *data_f;
+
+	gHostTransType = HOST_TRANS_WIFI;
+
+    sdkDispClearScreen();
+    sdkDispFillRowRam(SDK_DISP_LINE1, 0, "IP Address", SDK_DISP_DEFAULT);
+    sdkDispBrushScreen();
+
+	IPAddress[0] = 12;
+	memcpy(IPAddress+1, gTCPAddress, 12);
+	sdkKbKeyFlush();
+	ret = sdkKbGetScanf(0, IPAddress, 12, 12, SDK_MMI_NUMBER, SDK_DISP_LINE3);
+    Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
+
+    if(SDK_KEY_ENTER == ret)
+    {
+        len = IPAddress[0];
+        TraceHex("emv", "input IPAddress:", &IPAddress[1], len);
+
+        if(len > 12)
+        {
+            len = 12;
+        }
+        memcpy(gTCPAddress, IPAddress + 1, len); //鏈€鍚庝竴涓瓧鑺備负缁撴潫�?\0'
+    }
+	else if(SDK_KEY_ESC == ret)
+	{
+		return ;
+	}
+    TraceHex("emv", "input IPAddress:", gTCPAddress, len);
+
+    sdkDispClearScreen();
+    sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Port", SDK_DISP_DEFAULT);
+    sdkDispBrushScreen();
+
+	port[0] = IntBitMapLen(gTCPPort);
+	sdkU32ToAsc((u32)gTCPPort, port+1);
+	sdkKbKeyFlush();
+	ret = sdkKbGetScanf(0, port, 4, 5, SDK_MMI_NUMBER, SDK_DISP_LINE3);
+    Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
+
+    if(SDK_KEY_ENTER == ret)
+    {
+        len = port[0];
+        TraceHex("emv", "input port:", &port[1], len);
+
+        if(len > 5)
+        {
+            len = 5;
+        }
+		gTCPPort = convertToUnsignedInt(port + 1, len);
+    }
+    Trace("emv", "input port: %d", gTCPPort);
+
+	data_uf = convertToCString(gTCPAddress, 16);
+	data_f = formatIPAddress(data_uf);
+	Trace("lishiyao", "before removeLeadingZeros IP:%s\r\n", data_f);
+	removeLeadingZeros(data_f);
+	sdkOpenWifi(data_f, gTCPPort);
+}
+
+void PostSetHostCommuType(void)
+{
+	s32 key;
+
+    sdkDispClearScreen();
+    sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Communicate Type", SDK_DISP_DEFAULT);
+    sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1-Serial  2-Wifi", SDK_DISP_DEFAULT);
+    sdkDispBrushScreen();
+
+	key = sdkKbWaitKey(SDK_KEY_MASK_1 | SDK_KEY_MASK_2 | SDK_KEY_MASK_ENTER | SDK_KEY_ESC, SDK_ICC_TIMER_AUTO);
+	switch (key)
+	{
+		case SDK_KEY_1:
+			gHostTransType = HOST_TRANS_SERIAL;
+			break;
+
+		case SDK_KEY_2:
+			gHostTransType = HOST_TRANS_WIFI;
+			break;
+
+		default:
+			break;
+	}
+
 }

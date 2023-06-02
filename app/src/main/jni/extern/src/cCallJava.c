@@ -35,6 +35,12 @@ jmethodID CloseRF = NULL;
 jmethodID TimerisEnd = NULL;
 jmethodID TimerStart = NULL;
 jmethodID Kb_Flush=NULL;
+jmethodID OpenWifi = NULL;
+jmethodID ReadWifi = NULL;
+jmethodID SendWifi = NULL;
+jmethodID CloseWifi = NULL;
+jmethodID ListenTCP = NULL;
+jmethodID CheckWifi = NULL;
 
 
 JNIEXPORT jint JNICALL Java_com_nexgo_emv_JniNative_appmain(JNIEnv *env, jobject obj)
@@ -183,6 +189,85 @@ int InitDeviceOpera()
 	if(Kb_Flush == NULL){
 	    Kb_Flush = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "Kb_Flush","()V");
 	    if (Kb_Flush == NULL) {
+	        (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+	        return -2;
+	    }
+    }
+
+//    if(OpenWifi == NULL){
+//        OpenWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "OpenWifi","()V");
+//        if (OpenWifi == NULL) {
+//            (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+//            return -2;
+//        }
+//    }
+    if(OpenWifi == NULL){
+        OpenWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "openTCP","(Ljava/lang/String;I)V");
+        if (OpenWifi == NULL) {
+            (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+            return -2;
+        }
+    }
+
+//	if(SendWifi == NULL){
+//        SendWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "SendWifiData","(Ljava/lang/String;I[B)V");
+//        if (SendWifi == NULL) {
+//            (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+//            return -2;
+//        }
+//    }
+
+	if(SendWifi == NULL){
+        SendWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "sendTCP","([BI)V");
+        if (SendWifi == NULL) {
+            (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+            return -2;
+        }
+    }
+
+//	if(ReadWifi == NULL){
+//        ReadWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "ReadWifiData","([B)I");
+//        if (ReadWifi == NULL) {
+//            (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+//            return -2;
+//        }
+//    }
+
+	if(ReadWifi == NULL){
+        ReadWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "readTCP","()[B");
+        if (ReadWifi == NULL) {
+            (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+            return -2;
+        }
+    }
+
+//	if(CloseWifi == NULL){
+//	    CloseWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "closeWifi","()V");
+//	    if (CloseWifi == NULL) {
+//	        (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+//	        return -2;
+//	    }
+//    }
+
+	if(CloseWifi == NULL){
+	    CloseWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "closeTCP","()V");
+	    if (CloseWifi == NULL) {
+	        (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+	        return -2;
+	    }
+    }
+
+	if(ListenTCP == NULL){
+	    ListenTCP = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "startListenTCP","(I)V");
+	    if (ListenTCP == NULL) {
+	        (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
+	        return -2;
+	    }
+    }
+
+	if(CheckWifi == NULL){
+	    CheckWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "CheckWifiEnable","()I");
+	    if (CheckWifi == NULL) {
 	        (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
 	        return -2;
 	    }
@@ -483,7 +568,45 @@ void sdkTimerStar(unsigned int uiMs)
 	freeDeviceObject();
 }
 
-void sdkKbKeyFlush (void)
+void sdkOpenWifi(const char *IPAddress_cString, int port)
+{
+	int result = 1;
+	jstring javaString;
+
+    if(DeviceOpera == NULL || mDeviceOpera == NULL)
+	{
+        result = InitDeviceOpera();
+    }
+	if(result == 1)
+	{
+		Trace("JNI", "IPAddress_cString: %s\r\n", IPAddress_cString);
+		javaString = (*jniEnv)->NewStringUTF(jniEnv, IPAddress_cString);
+		Trace("JNI", "after NewStringUTF pointer: %p\r\n", javaString);
+		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port);
+        (*jniEnv)->DeleteLocalRef(jniEnv, javaString);
+	}
+	freeDeviceObject();
+}
+
+void sdkSendWifiData(unsigned char *data, int dataLen)
+{
+	int result = 1;
+	jbyteArray byteJava;
+
+    if(DeviceOpera == NULL || mDeviceOpera == NULL)
+	{
+        result = InitDeviceOpera();
+    }
+	if(result == 1)
+	{
+		byteJava = (*jniEnv)->NewByteArray(jniEnv, dataLen);
+		(*jniEnv)->SetByteArrayRegion(jniEnv, byteJava, 0, dataLen, (jbyte *)data);
+		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, SendWifi, byteJava, (jint)dataLen);
+	}
+	freeDeviceObject();
+}
+
+void sdkStartListenTCP(int port)
 {
 //	int result = 1;
 //    if(DeviceOpera == NULL || mDeviceOpera == NULL)
@@ -492,9 +615,85 @@ void sdkKbKeyFlush (void)
 //    }
 //	if(result == 1)
 //	{
-//		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, Kb_Flush);
+//		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, ListenTCP, (jint)port);
 //	}
 //	freeDeviceObject();
+}
+
+int sdkReadWifiData(unsigned char *data, int maxLen)
+{
+	int result = 1;
+	jbyteArray dataJava;
+	int len;
+
+    if(DeviceOpera == NULL || mDeviceOpera == NULL)
+	{
+        result = InitDeviceOpera();
+    }
+	if(result == 1)
+	{
+		dataJava = (*jniEnv)->CallObjectMethod(jniEnv, mDeviceOpera, ReadWifi);
+//		Trace("jni", "C receive data pointer = %p\r\n", dataJava);
+		if(dataJava != NULL)
+		{
+			len = (*jniEnv)->GetArrayLength(jniEnv, dataJava);
+			if(len > maxLen)
+			{
+				len = maxLen;
+			}
+			(*jniEnv)->GetByteArrayRegion(jniEnv,dataJava, 0,  len, (jbyte*)data);
+			return len;
+		}
+		else
+		{
+			return -1;
+		}
+	}
+	freeDeviceObject();
+}
+
+void sdkCloseWifi(void)
+{
+	int result = 1;
+    if(DeviceOpera == NULL || mDeviceOpera == NULL)
+	{
+        result = InitDeviceOpera();
+    }
+	if(result == 1)
+	{
+		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, CloseWifi);
+	}
+	freeDeviceObject();
+}
+
+void sdkKbKeyFlush(void)
+{
+	int result = 1;
+    if(DeviceOpera == NULL || mDeviceOpera == NULL)
+	{
+        result = InitDeviceOpera();
+    }
+	if(result == 1)
+	{
+		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, Kb_Flush);
+	}
+	freeDeviceObject();
+}
+
+int sdkGetWifiEnable(void)
+{
+	int result = 1;
+    if(DeviceOpera == NULL || mDeviceOpera == NULL)
+	{
+        result = InitDeviceOpera();
+    }
+	if(result == 1)
+	{
+		result = (*jniEnv)->CallIntMethod(jniEnv, mDeviceOpera, CheckWifi);
+//		Trace("JNI", "sdkGetWifiEnable ret = %d\r\n", result);
+		return result;
+	}
+	freeDeviceObject();
 }
 
 void freeDeviceObject(){

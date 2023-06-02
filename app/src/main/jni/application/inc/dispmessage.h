@@ -48,6 +48,7 @@
 #define DISP_BCTCHOSTMENU2 "3.Terminal Param"
 #define DISP_BCTCHOSTMENU3 "4.Black List"
 #define DISP_BCTCHOSTMENU4 "5.Revo PK 6.Init All Data"
+#define DISP_BCTCHOSTMENU5 "7.TCP 8.Communicate Type"
 
 #define DISP_SETTIMEMENU 	"设置时钟"
 #define DISP_SETTIMEMENU1 	"当前系统时间"

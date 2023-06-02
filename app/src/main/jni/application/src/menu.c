@@ -59,8 +59,9 @@ int Menu0()
 		}
 		else
 		{
-			sdkmSleep(500);
+			sdkmSleep(1500);
 			rslt = BCTCSingleTrade();
+//			Trace("BCTC", "finish BCTCSingleTrade\r\n");
 			if(rslt == SDK_OK)
 			{
 				memset(gstasAmount, 0, sizeof(gstasAmount));
@@ -82,38 +83,18 @@ int Menu0()
 					memset(gbcOtherAmount, 0, 6);
 				}
 
-				if(gstbctcautotrade.typeexit)
-				{
-					sdkEMVBaseConfigTLV("\x9C", &(gstbctcautotrade.transtype), 1);
-				}
-
 				DealTrade();
+			}
+			else
+			{
+				sdkmSleep(1500);
 			}
 		}
 
-		sdkmSleep(500);
-        memset(bctime, 0, sizeof(bctime));
-        memset(astime, 0, sizeof(astime));
-        sdkGetRtc(bctime);
-
-        if(bctime[0] > 0x50)
-        {
-            sprintf(astime, "19%02x-%02x-%02x %02x:%02x:%02x", bctime[0], //显示的是系统时钟
-                    bctime[1], bctime[2], bctime[3], bctime[4], bctime[5]);
-        }
-        else
-        {
-            sprintf(astime, "20%02x-%02x-%02x %02x:%02x:%02x", bctime[0], //显示的是系统时钟
-                    bctime[1], bctime[2], bctime[3], bctime[4], bctime[5]);
-        }
-        sdkDispClearRowRam(SDK_DISP_LINE5);
-        sdkDispFillRowRam(SDK_DISP_LINE5, 0, astime, SDK_DISP_DEFAULT);
-        sdkDispBrushScrecen();
-		sdkmSleep(500);
         key = sdkKbGetKey();
         if(key)
         {
-            Trace("test", "key=%x\r\n", key);
+            Trace("test", "key=%d\r\n", key);
         }
         if(key == SDK_KEY_ESC)
         {
@@ -166,12 +147,12 @@ int Menu0()
                break;
         }
 
-        sdkmSleep(100);//for G201
+        sdkmSleep(1100);//for G201
     }
 
 _RETURN:
 
-    sdkIccPowerDown();
+//    sdkIccPowerDown();
     memset(gstasAmount, 0, sizeof(gstasAmount));
     memset(gbcOtherAmount,0,sizeof(gbcOtherAmount));
     memset(gstasAmount, 0, sizeof(gstasAmount));
@@ -182,6 +163,7 @@ _RETURN:
 
 int Menu1()
 {
+	Trace("app", "goto Menu1\r\n");
     int key;
 	s32 rslt = 0;
 
@@ -259,11 +241,13 @@ int Menu1()
 
 s32 Menu2()
 {
+	Trace("app", "goto Menu2\r\n");
 	int key;
 	s32 rslt = 0;
 	sdkDispClearScreen();
-	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Set parameters Menu2", SDK_DISP_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Test Menu", SDK_DISP_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.Version 2.Add Test AID", SDK_DISP_LEFT_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "3.Send TCP 4.Outcome", SDK_DISP_LEFT_DEFAULT);
 	sdkDispBrushScreen();
 
 	sdkKbKeyFlush();
@@ -278,6 +262,15 @@ s32 Menu2()
 		case SDK_KEY_2:
 			AddTestCardAID();
 			break;
+
+		case SDK_KEY_3:
+			SendTCPTest();
+			break;
+
+		case SDK_KEY_4:
+			HostOutcomeTest();
+			break;
+
 		case SDK_KEY_ENTER:
 		case SDK_KEY_DOWN:
 		case SDK_KEY_UP:

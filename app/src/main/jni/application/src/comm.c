@@ -1,4 +1,5 @@
 #include "appglobal.h"
+#include "sdkoutcome.h"
 
 #define WAITSIO0    0
 #define WAITSIO1    1
@@ -19,17 +20,17 @@ s32 CloseComm()
 
 s32 BCTCSendData(unsigned char* buf, unsigned short len)
 {
-    unsigned char *tempbuf;
-    unsigned int i;
-    unsigned char high, low;
+    u8 *tempbuf;
+    u32 i;
+    u8 high, low;
     s32 ret;
-//	extern gSerialPortId;
 
     tempbuf = (u8 *)sdkGetMem(len + 3);
     memset(tempbuf, 0, len + 3);
 
     tempbuf[0] = 0x02;     //STX
     tempbuf[1] = buf[0];   //MsgType
+    Trace("BCTC", "send MsgType: %02X\r\n", buf[0]);
 
     low = (len - 1) & 0xFF;
     high = ((len - 1) >> 8) & 0xFF;
@@ -45,9 +46,16 @@ s32 BCTCSendData(unsigned char* buf, unsigned short len)
     TraceHex("", "send_data", tempbuf, len + 3);
     Trace("chenjun","send_data len %d\r\n",len + 3);
 
-    ret =  sdkCommUartSendData(gSerialPortId, tempbuf, len + 3);
-    Trace("chenjun","send_data return %d\r\n",ret);
-
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		ret = sdkCommUartSendData(gSerialPortId, tempbuf, len + 3);
+		Trace("app","send_data return %d\r\n",ret);
+	}
+	else if(HOST_TRANS_WIFI == gHostTransType)
+	{
+		sdkSendWifiData(tempbuf, len + 3);
+		ret = len + 3;
+	}
 
     sdkFreeMem(tempbuf);
     return ret;
@@ -103,64 +111,22 @@ s32 BCTCRecvDatatemp(u8 *buf, int maxsizelen)
 
 s32 BCTCRecvData(u8 *buf, int maxsizelen)
 {
-	unsigned char *recv = NULL;
-	int ret,index = 0;
-	int len,len_all = -1;
-	bool finish = false;
-//	sdkTimerStar(1500);
-//	unsigned char header[4] = {0};
-//
-//
-//	recv = (unsigned char *)sdkGetMem(maxsizelen);
-//	memset(recv , 0, maxsizelen);
-
-	return sdkCommUartRecvData(gSerialPortId, buf, maxsizelen, 1000);
-//	if(ret == 4)
-//	{
-//		len = header[2]*256+header[3];
-//		len_all = len;
-//		Trace("BCTC", "tlv len = %d\r\n", len);
-//	}
-//	TraceHex("BCTC", "header:", header, 4);
-//	index = 0;
-//	while(1)
-//	{
-//		ret = sdkCommUartRecvData(gSerialPortId, recv+index, len, 1500);
-//		if(ret != -1)
-//		{
-//			if(ret != len)
-//			{
-//				len -= ret;
-//				index += ret;
-//			}
-//			else
-//			{
-//				finish = true;
-//				break;
-//			}
-//		}
-//		if(sdkTimerIsEnd())
-//		{
-//			break;
-//		}
-//	}
-//
-//	if(finish)
-//	{
-//		memcpy(buf, header, 4);
-//		memcpy(buf+4, recv, len_all);
-//		TraceHex("BCTC", "body", recv, len_all);
-//	}
-//	sdkFreeMem(recv);
-//	return len_all+4;
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		return sdkCommUartRecvData(gSerialPortId, buf, maxsizelen, 1000);
+	}
+	else if(HOST_TRANS_WIFI == gHostTransType)
+	{
+		return sdkReadWifiData(buf, maxsizelen);
+	}
 }
 
 
 s32 BCTCRecvDataTTemp(u8 *buf, int maxsizelen)
 {
-    unsigned char retCode;
-    unsigned char recStep = WAITSIO0;
-    unsigned char data;
+    u8 retCode;
+    u8 recStep = WAITSIO0;
+    u8 data;
     s32 rCount;
     unsigned short templeni = 0, tempdataLen = 0;
 	u16 timeout = 5;
@@ -242,4 +208,3 @@ s32 BCTCRecvDataTTemp(u8 *buf, int maxsizelen)
 
     return SDK_ERR;
 }
-

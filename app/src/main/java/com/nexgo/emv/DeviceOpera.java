@@ -1,11 +1,5 @@
 package com.nexgo.emv;
 
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.os.Build;
-import android.os.Environment;
 import android.util.Log;
 
 import com.nexgo.emv.key.PosTimer;
@@ -13,11 +7,9 @@ import com.szzt.android.util.HexDump;
 import com.szzt.sdk.device.beep.Beep;
 import com.szzt.sdk.device.card.ContactlessCardReader;
 import com.szzt.sdk.device.port.SerialPort;
-import com.szzt.sdk.system.HwSecurityManager;
 
-import java.io.File;
-import java.nio.ByteBuffer;
-import java.util.logging.Logger;
+import java.io.IOException;
+import java.security.PublicKey;
 
 
 /**
@@ -29,12 +21,19 @@ public class DeviceOpera {
     private SerialPort port;
     public int portId;
     public PosTimer timer;
+    public WifiController wifiController;
+    public UDPManager udpManager;
+    public TCPClient tcpClient;
+
 //    private HwSecurityManager hwSecurityManager;
     public DeviceOpera(){
         mainApplication = XGDApp.getInstance().getMainApplication();
         mCard=mainApplication.getContactlessCardReader();
         port=mainApplication.getSerialPortWrapperImpl();
         mainApplication.getFileSystemWrapperImpl();
+        wifiController = new WifiController(mainApplication.getApplicationContext());
+        udpManager = new UDPManager();
+        tcpClient = new TCPClient();
 //        hwSecurityManager=mainApplication.getHwSecurityManager();
     }
 
@@ -117,8 +116,7 @@ public class DeviceOpera {
         }
     }
 
-
-
+    //非接复位
     public int ResetRF(){
         int ret=mCard.waitForCard(5*1000);
         if(ret==0){
@@ -128,6 +126,7 @@ public class DeviceOpera {
         return ret;
     }
 
+    //关闭非接
     public void CloseRF(){
         mCard.cancel();
     }
@@ -228,5 +227,111 @@ public class DeviceOpera {
 
     public boolean TimerisEnd(){
         return timer.checkTimerExpired();
+    }
+
+    public void OpenWifi()
+    {
+        wifiController.openWifi();
+    }
+
+    public int CheckWifiEnable(){
+        if(tcpClient.getStatus())
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    public void startListenTCP(int listenPort)
+    {
+        WifiController.TcpDataListener listener = new WifiController.TcpDataListener(){
+            @Override
+            public void onDataReceived(byte[] data) {
+                // 接收到数据时的处理逻辑
+                // 这里只将数据添加到缓存，不做其他处理
+            }
+        };
+        try {
+            wifiController.startTcpDataListener(listenPort, listener);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void SendWifiData(String ipAddress, int port, byte [] data)
+    {
+        try {
+            wifiController.sendTcpData(ipAddress, port, data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public int ReadWifiData(byte [] data)
+    {
+        Log.d("lishiyao", "ReadWifiData input data from C: "+ data);
+        if(data == null)
+        {
+            return -1;
+        }
+
+        data = wifiController.readCachedData();
+        if(data != null)
+        {
+            return data.length;
+        }
+        else
+        {
+            return -1;
+        }
+    }
+
+    public void closeWifi()
+    {
+        wifiController.closeWifi();
+    }
+
+    public void openUDP(String ipAddress, int port) throws IOException {
+        udpManager.openConnection(ipAddress, port);
+    }
+
+    public void sendUDP(byte [] data, int len) throws IOException {
+        udpManager.sendData(data, len);
+    }
+
+    public int readUDP(byte[] buffer, int bufferSize) throws IOException {
+        int ret;
+        ret = udpManager.readData(buffer, bufferSize);
+        if(ret > 0)
+        {
+            return ret;
+        }
+        else
+        {
+            return -1;
+        }
+    }
+
+    public void closeUDP(){
+        udpManager.closeConnection();
+    }
+
+    public void openTCP(String IP, int port) throws IOException {
+        tcpClient.connect(IP,port);
+    }
+
+    public void sendTCP(byte [] data, int len) throws IOException {
+        tcpClient.send(data);
+    }
+
+    public byte[] readTCP() throws IOException {
+        return tcpClient.read();
+    }
+
+    public void closeTCP() throws IOException {
+        tcpClient.close();
     }
 }
