@@ -256,6 +256,7 @@ enum EMV_Status
 	EMV_STA_GETDATAAFTERGPO_COMPLETED = 39,				//!<GPO之后Get data流程完成
 	EMV_STA_POSTGACBAlANCEREAD_COMPLETED = 40,			//!<GAC之后读余额流程完成
 	EMV_REQ_PREPROCESS_LOADAIDPARAM = 41,				//!<请求进行预处理，加载AID参数
+	EMV_REQ_SECONDTAP = 42,								//!<请求二次拍卡进行联机处理
 
 	/************************** 结束状态（流程相关） **************************/
     EMV_COMPLETED = 100,                                //!< 交易完成

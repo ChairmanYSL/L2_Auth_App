@@ -131,6 +131,11 @@ typedef struct
 
 EXTERN BCTC_PKRECOVA gstbctcpkrecova[2];
 
+EXTERN unsigned char gstbctcupdatetemplate[850];
+EXTERN unsigned short gbctcupdatetemplatelen;
+EXTERN unsigned char gstbctcreadtemplate[850];
+EXTERN unsigned short gbctcreadtemplatelen;
+
 extern void SaveBlackData();
 extern void ReadBlackData();
 extern void SaveRecovaData();

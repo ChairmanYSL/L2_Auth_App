@@ -492,11 +492,20 @@ s32 ReadCardDisp()
 		}
 		else//The first prompt to read the card
 		{
-			sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Present Card", SDK_DISP_DEFAULT);
-			sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Ready to Read", SDK_DISP_DEFAULT);
+			if(gDispSecondTap)
+			{
+				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Additional Tap", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Plz present card again", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Ready to Read", SDK_DISP_DEFAULT);
+			}
+			else
+			{
+				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Present Card", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Ready to Read", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE3, 0, text, SDK_DISP_DEFAULT);
+			}
 		}
 
-        sdkDispFillRowRam(SDK_DISP_LINE3, 0, text, SDK_DISP_DEFAULT);
     }
 
     sdkDispBrushScreen();
@@ -1180,6 +1189,7 @@ s32 DealTrade(void)
 
 	gCollisionflag = 0;
 	gCollisionCounter = 0;
+	gDispSecondTap = 0;
 
 	memset(&SimData, 0, sizeof(_SimData));
 	ReadSimData(&SimData);
@@ -1197,6 +1207,7 @@ _RETRY:
 	sdkPureSetSendOutcome(BCTCSendOutCome);
 	sdkPureSetSendUIRequest(BCTCSendUIRequest);
 
+_SECONDTAP:
 	while(1)
 	{
 		ReadCardDisp();
@@ -1214,7 +1225,7 @@ _RETRY:
 		}
 		else if(SDK_ERR == ret)
 		{
-			sdkTestIccDispText("Transaction Terminate");
+			sdkTestIccDispText("Read Card error,Tx Stop");
 			return ret;
 		}
 		else
@@ -1277,6 +1288,11 @@ _RETRY:
 			case EMV_ACCEPTED_OFFLINE:
 				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Offline Approve");
+				if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == gstOutcome.CVM)
+				{
+					sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Please Sign", SDK_DISP_FDISP | SDK_DISP_CDISP | SDK_DISP_INCOL);
+					sdkDispBrushScreen();
+				}
 				FlowContinueFlag = 0;
 				break;
 
@@ -1302,8 +1318,34 @@ _RETRY:
 			case EMV_STA_TORNRECOVER:
 			case EMV_REQ_READCAARD_AGAIN:
 				sdkIccPowerDown();
-				sdkmSleep(900); // 1000
+				sdkmSleep(1000);
 				goto _RETRY;
+
+			case EMV_REQ_SECONDTAP:
+				sdkDispClearScreen();
+				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Additional Tap", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Plz present card again", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Ready to Read", SDK_DISP_DEFAULT);
+				sdkDispBrushScrecen();
+				sdkIccPowerDown();
+				sdkmSleep(1000);
+
+				ret = SendOnlineBag();
+				if(ret != SDK_OK)
+				{
+					sdkPureImportOnlineResult(SDK_ERR, NULL);
+				}
+				else
+				{
+					sdkPureImportOnlineResult(SDK_OK, gstResponseCode);
+				}
+
+				memset(rspcode, 0, sizeof(rspcode));
+				sdkEMVBaseReadTLV("\x8A", rspcode, &ret);
+				TraceHex("app", "after sdkPureImportOnlineResult 8A", rspcode, 2);
+
+				gDispSecondTap = 1;
+				goto _SECONDTAP;
 
 			case EMV_ENDAPPLICATION:
 				sdkIccPowerDown();

@@ -530,7 +530,7 @@ void BCTCUpDataParam_CAPK()
 
         while(!EndFlag)
         {
-			sdkmSleep(1500);
+//			sdkmSleep(500);
             len = BCTCRecvData(ComPackRecv, 1030);
 			Trace("lishiyao", "BCTCRecvData len = %d\r\n", len);
             if(len <= 0)
@@ -540,7 +540,7 @@ void BCTCUpDataParam_CAPK()
                 Trace("lishiyao", "error flag1\r\n");
                 break;
             }
-			TraceHex("lishiyao", "BCTCRecvData:", ComPackRecv, len);
+			TraceHex("lishiyao", "BCTCRecvData:", ComPackRecv, len-1);
             ComPackRecvLen = len;
 
             if((ComPackRecv[1] != BCTC_MNG_DownloadCAPK_RECV) || (ComPackRecv[0] != 0x02))
@@ -598,7 +598,56 @@ void BCTCUpDataParam_CAPK()
 	}
 }
 
+s32 BCTCTlvToMSTemplate(u8 *buf, u16 len)
+{
+    u8 *pb, *pbTlv;
+	u16 vLen;
 
+	pbTlv = TlvSeek(buf, len, 0xBF70);
+	memset(gstbctcupdatetemplate, 0, 850);
+	gbctcupdatetemplatelen = 0;
+	if(NULL != pbTlv && 0 != TlvLen(pbTlv))
+	{
+		gbctcupdatetemplatelen = TlvLen(pbTlv);
+		Trace("BCTC", "Download Update Template len :%d\r\n", gbctcupdatetemplatelen);
+
+		if(gbctcupdatetemplatelen > 0 && gbctcupdatetemplatelen<= 130)
+		{
+//			gbctcupdatetemplatelen -= 3;
+			memcpy(gstbctcupdatetemplate, pbTlv+3, gbctcupdatetemplatelen);
+			TraceHex("BCTC", "Download Update Template", gstbctcupdatetemplate, gbctcupdatetemplatelen);
+		}
+		else if(gbctcupdatetemplatelen > 127 && gbctcupdatetemplatelen<= 259)
+		{
+//			gbctcupdatetemplatelen -= 4;
+			memcpy(gstbctcupdatetemplate, pbTlv+4, gbctcupdatetemplatelen);
+			TraceHex("BCTC", "Download Update Template", gstbctcupdatetemplate, gbctcupdatetemplatelen);
+		}
+		else if(gbctcupdatetemplatelen > 259)
+		{
+//			gbctcupdatetemplatelen -= 5;
+			memcpy(gstbctcupdatetemplate, pbTlv+5, gbctcupdatetemplatelen);
+			TraceHex("BCTC", "Download Update Template", gstbctcupdatetemplate, gbctcupdatetemplatelen);
+		}
+	}
+
+	pbTlv = TlvSeek(buf, len, 0xBF71);
+	memset(gstbctcreadtemplate, 0, 850);
+	gbctcreadtemplatelen = 0;
+	if(NULL != pbTlv && 0 != TlvLen(pbTlv))
+	{
+		gbctcreadtemplatelen = TlvLen(pbTlv);
+		Trace("BCTC", "Download Read Template len :%d\r\n", gbctcreadtemplatelen);
+		memcpy(gstbctcreadtemplate, pbTlv+3, gbctcreadtemplatelen);
+		TraceHex("BCTC", "Download Read Template", gstbctcreadtemplate, gbctcreadtemplatelen);
+	}
+
+	sdkDispClearScreen();
+	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Success", SDK_DISP_DEFAULT);
+	sdkDispBrushScrecen();
+
+	return SDK_OK;
+}
 
 s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
 {
@@ -609,7 +658,8 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
 	s32 ret;
 	u8 DISP[33];
 	u32 index = 0;
-
+	u32 FloorLmt_Num=0;
+	_SimData SimData={0};
 
     pbTlv = TlvSeek(buf, ilen, 0x9F06);
 
@@ -771,8 +821,14 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
     if(pbTlv != NULL)
     {
         pb = TlvVPtr(pbTlv);
-        memcpy(tempAid->FloorLimit, pb, 4);
-    }
+		TraceHex("BCTC", "Download 9F1B", pb, 6);
+		sdkBcdToU32(&FloorLmt_Num, pb, 6);
+		FloorLmt_Num /= 100;
+		Trace("BCTC", "trans to u32: %d\r\n", FloorLmt_Num);
+		sdkU32ToHex(tempAid->FloorLimit, FloorLmt_Num, 4);
+		TraceHex("BCTC", "trans to hex", tempAid->FloorLimit, 4);
+	}
+
     pbTlv = TlvSeek(buf, ilen, 0x9F09);
 
     if(pbTlv != NULL)
@@ -995,6 +1051,32 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
 		extempAid->ATOLLen = TlvLen(pbTlv);
     }
 	TraceHex("Download AID", "Authentication Transaction Data Tag Object List (ATDTOL)", extempAid->ATDTOL, TlvLen(pbTlv));
+
+	pbTlv = TlvSeek(buf, ilen, 0x9F76);	//Authentication Transaction Data Tag Object List (ATDTOL)
+
+    if(pbTlv != NULL)
+    {
+        pb = TlvVPtr(pbTlv);
+		extempAid->TransDataLen = TlvLen(pbTlv);
+		if(extempAid->TransDataLen > 256)
+		{
+			extempAid->TransDataLen = 256;
+		}
+        memcpy(extempAid->TransData, pb, extempAid->TransDataLen);
+		TraceHex("Download AID", "Terminal Transaction Data(9F76)", extempAid->TransData, extempAid->TransDataLen);
+    }
+
+	ReadSimData(&SimData);
+	pbTlv = TlvSeek(buf, ilen, 0xDF7F);	//Authentication Transaction Data Tag Object List (ATDTOL)
+	if(NULL != pbTlv)
+	{
+		SimData.RestrictAIDLen = TlvLen(pbTlv);
+		Trace("Download AID", "Restrict AID Len = %d\r\n", SimData.RestrictAIDLen);
+		pb = TlvVPtr(pbTlv);
+		memcpy(SimData.RestrictAID, pb, SimData.RestrictAIDLen);
+		TraceHex("Download AID", "Restrict AID(DF7F)", SimData.RestrictAID, SimData.RestrictAIDLen);
+	}
+	SaveSimData(&SimData);
 
     ret = sdkEMVBaseAddAnyAIDList(tempAid, 1);
 	Trace("BCTC", "sdkEMVBaseAddAnyAIDList ret = %d\r\n", ret);
@@ -1609,6 +1691,63 @@ void BCTCUpDataParam_Black()
 	}
 }
 
+void BCTCUpDataParam_MSTemplate(void)
+{
+	u8 MsgType, ComPackSend[16]={0};
+	u16 ComPackSendLen=0, ComPackRecvLen=0, Paraindex;
+	u16 PararecordNum, PararecordLen, Parai;
+	u8 recordType;
+	s32 retCode = SDK_ERR;
+	u8 ComPackRecv[850]={0};
+	u16 TagLen;
+	u8 EndFlag = 0;
+	u8 step = 1;
+	s32 len;
+	u8 disp[32] = {0};
+	u8 *pbTlv, *pb;
+	u8 i = 0;
+
+	sdkDispClearScreen();
+	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Download MS Template", SDK_DISP_DEFAULT);
+	sdkDispBrushScreen();
+
+	MsgType = BCTC_MNG_DownloadDRL_SEND;
+
+	memset(ComPackRecv, 0, 850);
+	memset(ComPackSend, 0, sizeof(ComPackSend));
+	ComPackSendLen = 0;
+	ComPackRecvLen = 0;
+	ComPackSend[0] = MsgType;
+	ComPackSendLen++;
+	BCTCSendData(ComPackSend, ComPackSendLen);
+
+	len = BCTCRecvData(ComPackRecv, 850);
+
+	if(len <= 0)
+	{
+		EndFlag = 1;
+		return SDK_ERR;
+	}
+	ComPackRecvLen = len;
+
+	if((ComPackRecv[1] != BCTC_MNG_DownloadDRL_RECV) || (ComPackRecv[0] != 0x02))
+	{
+		EndFlag = 1;
+		return SDK_ERR;
+	}
+
+	if(memcmp(&ComPackRecv[4], "\x03\x01\x00", 3) == 0)
+	{
+		retCode = SDK_OK;
+		return SDK_ERR;
+	}
+
+	TagLen = ComPackRecv[2] * 256 + ComPackRecv[3];
+	TraceHex("emv", "Recv MS Template", ComPackRecv+4, TagLen);
+
+	return BCTCTlvToMSTemplate(&ComPackRecv[4], TagLen);
+
+}
 
 void BCTCUpDataParam_PKRecova(void)
 {
@@ -1833,7 +1972,7 @@ void BCTCPostUpDateParam(void)
                break;
 
 			case SDK_KEY_7:
-				PostSetTCPSetting();
+				BCTCUpDataParam_MSTemplate();
 				break;
 
 			case SDK_KEY_8:
@@ -2299,7 +2438,7 @@ s32 BCTCSendMAGBase(u8 MsgType)
 
 s32 BCTCSendICCBase(u8 MsgType)
 {
-    u8 *ComPackSend, *ComPackRecv;
+    u8 *ComPackSend, ComPackRecv[512];
     s32 ComPackSendLen = 0, ComPackRecvLen = 0, VarReadLen = 0;
     s32 len = 0, heIssuerAuthDatalen = 0;
     u8 POSEntryMode = MAG_NO_IC;
@@ -2472,33 +2611,31 @@ s32 BCTCSendICCBase(u8 MsgType)
     }
     sdkFreeMem(ComPackSend);
 
-    ComPackRecv = (u8*)sdkGetMem(BCTC_RECV_LEN);
+    memset(ComPackRecv, 0, sizeof(ComPackRecv));
 
-    if(ComPackRecv == NULL)
-    {
-        return SDK_ERR;
-    }
-    memset(ComPackRecv, 0, BCTC_RECV_LEN);
-
-	Trace("chenjun","before  BCTCRecvData\r\n");
-    len = BCTCRecvData(ComPackRecv, BCTC_RECV_LEN);
-	Trace("chenjun", "after BCTCRecvData return %d\r\n",len);
+    ComPackRecvLen = BCTCRecvData(ComPackRecv, sizeof(ComPackRecv));
+	Trace("BCTC", "after BCTCRecvData return %d\r\n",ComPackRecvLen);
 
     if(len <= 0)
     {
-        sdkFreeMem(ComPackRecv);
         return SDK_ERR;
-    }
-    ComPackRecvLen = len;
+	}
 
-
-	if((ComPackRecv[0] != 0x02) || ((ComPackRecv[1] != BCTC_TRS_AuthReq_RECV) && (ComPackRecv[1] != BCTC_TRS_FinReq_RECV)))
+	if(ComPackRecv[0] != 0x02)
     {
-        sdkFreeMem(ComPackRecv);
         return SDK_ERR;
     }
+	else if(ComPackRecv[1] != BCTC_TRS_AuthReq_RECV)
+	{
+        return SDK_ERR;
+	}
+	else if(ComPackRecv[1] != BCTC_TRS_FinReq_RECV)
+	{
+        return SDK_ERR;
+	}
 
     TlvLength = ComPackRecv[2] * 256 + ComPackRecv[3];
+	TraceHex("BCTC", "Recv Pack", ComPackRecv, TlvLength+4);
 
     if(TlvLength >= 3)
     {
@@ -2510,7 +2647,6 @@ s32 BCTCSendICCBase(u8 MsgType)
 
             if(rsplen != 2)
             {
-                sdkFreeMem(ComPackRecv);
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
@@ -2519,18 +2655,17 @@ s32 BCTCSendICCBase(u8 MsgType)
         }
         else
         {
-            sdkFreeMem(ComPackRecv);
             return SDK_ERR;
         }
-        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x89);
 
+        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x89);
         if(pbTlv != NULL)
         {
             pb = TlvVPtr(pbTlv);
             sdkEMVBaseConfigTLV("\x89", pb, 6);
         }
-        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x91);
 
+        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x91);
         if(pbTlv != NULL)
         {
             pb = TlvVPtr(pbTlv);
@@ -2542,18 +2677,18 @@ s32 BCTCSendICCBase(u8 MsgType)
 			gstheIssuerAuthDataLen = heIssuerAuthDatalen;
             memcpy(gstheIssuerAuthData, pb, gstheIssuerAuthDataLen);
 			sdkEMVBaseConfigTLV("\x91", gstheIssuerAuthData, gstheIssuerAuthDataLen);
-        }
+			TraceHex("BCTC", "Issuer Auth Data", gstheIssuerAuthData, gstheIssuerAuthDataLen);
+		}
 
         pTempScript71 = (u8*)sdkGetMem(256);
 
         if(pTempScript71 == NULL)
         {
-            sdkFreeMem(ComPackRecv);
             return SDK_ERR;
         }
         memset(pTempScript71, 0, 256);
         Script71Len = TlvSeekSame(&ComPackRecv[4], TlvLength, 0x71, pTempScript71);
-		Trace("chenjun", "chenjun Script71Len = %d\r\n", Script71Len);
+		Trace("BCTC", "Script71Len = %d\r\n", Script71Len);
 
         TraceHex("", "pTempScript71", pTempScript71, Script71Len);
 
@@ -2562,7 +2697,6 @@ s32 BCTCSendICCBase(u8 MsgType)
         if(pTempScript72 == NULL)
         {
             sdkFreeMem(pTempScript71);
-            sdkFreeMem(ComPackRecv);
             return SDK_ERR;
         }
         memset(pTempScript72, 0, 256);
@@ -2595,9 +2729,8 @@ s32 BCTCSendICCBase(u8 MsgType)
 	    sdkFreeMem(pTempScript72);
 	}
 
-    TraceHex("Auth", "gstheIssuerScriptData", gstheIssuerScriptData, gstheIssuerScriptLen);
+//    TraceHex("Auth", "gstheIssuerScriptData", gstheIssuerScriptData, gstheIssuerScriptLen);
 
-    sdkFreeMem(ComPackRecv);
     return SDK_OK;
 }
 
@@ -2941,7 +3074,9 @@ s32 BCTCStartTrade(void)
 	{
 		if(OpenComm() < 0)
 		{
+			sdkDispClearScreen();
 			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
 			return SDK_ERR;
 		}
 	}
@@ -2949,7 +3084,9 @@ s32 BCTCStartTrade(void)
     {
 		if(!sdkGetWifiEnable())
 		{
+			sdkDispClearScreen();
 			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
 			return SDK_ERR;
 		}
     }
@@ -2962,6 +3099,7 @@ s32 BCTCStartTrade(void)
         CloseComm();
         return SDK_ERR;
     }
+
     ComPackRecv = (u8*)sdkGetMem(BCTC_RECV_LEN);
     memset(ComPackRecv, 0, BCTC_RECV_LEN);
 
@@ -3103,8 +3241,6 @@ s32 BCTCStartTrade(void)
 			{
 				BCTCUpDataParam_TERMINFO();
 			}
-
-
         }
     }
     sdkFreeMem(ComPackRecv);

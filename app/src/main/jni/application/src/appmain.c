@@ -75,14 +75,17 @@ s32 appmain(s32 argc, char const *argv[])
 {
     int ret;
 	s32 timeout = 0;
+	_SimData SimData = {0};
 //	u8 *data_uf, *data_f;
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_APPSTARTUP, SDK_DISP_DEFAULT);
     sdkDispBrushScreen();
+
 	Trace("emv","goto sdkEMVBasePowerStartInit\r\n");
     sdkEMVBasePowerStartInit();
 	ReadAPPEXAID();
+	ReadSimData(&SimData);
 	sdkEMVBase_SetEMVLogOutput(true);
 
 #ifdef ZT_SDK_DEBUG
@@ -98,10 +101,12 @@ s32 appmain(s32 argc, char const *argv[])
 	gJCBPaperNum = 1;
 	gTransCurrExponent = 2;//默认有两位小数
 	gSerialPortId = OpenComm();
+//	gSerialPortId = 1;
 	Trace("lishiyao", "return portID:%d\r\n", gSerialPortId);
-	gTCPPort = 6789;
-	memset(gTCPAddress, 0, sizeof(gTCPAddress));
-	memcpy(gTCPAddress, "192168250093", 12);
+
+//	gTCPPort = SimData.TCPPort;
+//	memcpy(gTCPAddress, SimData.IPAddress, 16);
+
 	gHostTransType = HOST_TRANS_SERIAL;
 
 //	data_uf = convertToCString(gTCPAddress, 16);

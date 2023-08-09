@@ -255,6 +255,8 @@ void InitSimData(_SimData *SimData)
     SimData->bBatchCapture = false; //TermInfo.bBatchCapture
     SimData->ODAalgrthFlag = true; //TermInfo.ODAalgrthFlag
     memcpy(SimData->VocherNo, "\x00\x00\x00\x01", 4);
+	SimData->TCPPort = 8182;
+	memcpy(SimData->IPAddress, "192168250093", 12);
 }
 
 void SaveSimData(_SimData *SimData)
@@ -1913,7 +1915,7 @@ void PostInitSysData(void)
 	u8 fn[64] = {0};
 
 	sdkDispClearScreen();
-	sdkDispFillRowRam(SDK_DISP_LINE2, 0, DISP_SETINITALL,SDK_DISP_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Init all data",SDK_DISP_DEFAULT);
 	sdkDispBrushScreen();
 
 	sdkKbKeyFlush();
@@ -1930,6 +1932,10 @@ void PostInitSysData(void)
 			SaveBlackData();
 			memset(gstbctcpkrecova, 0, sizeof(gstbctcpkrecova));
 			SaveRecovaData();
+			memset(gstbctcreadtemplate, 0, sizeof(gstbctcreadtemplate));
+			gbctcreadtemplatelen = 0;
+			memset(gstbctcupdatetemplate, 0, sizeof(gstbctcupdatetemplate));
+			gbctcupdatetemplatelen = 0;
 
 			IccDispText(DISP_OK);
 			break;
@@ -2018,6 +2024,12 @@ s32 IccSetAIDEX()
     {
         return SDK_OK;
     }
+
+	if(gstbctcautotrade.typeexit)
+	{
+		sdkEMVBaseConfigTLV("\x9C", &gstbctcautotrade.transtype, 1);
+	}
+
     sdkEMVBaseReadTLV("\x9C", &Transtype, &len);
 	Trace("SetBeforeGPO", "TransType in Tag: %02X\r\n ", Transtype);
 	Trace("SetBeforeGPO", "aidintermlen in Tag: %d\r\n ", aidintermlen);
@@ -2066,6 +2078,51 @@ s32 IccSetAIDEX()
 	TraceHex("SetBeforeGPO", "TermCountryCode", Simdata.TermCountryCode, 2);
 	sdkEMVBaseConfigTLV("\x5F\x2A", Simdata.TransCurrencyCode, 2);
 	TraceHex("SetBeforeGPO", "TransCurrencyCode", Simdata.TransCurrencyCode, 2);
+	if(Simdata.RestrictAIDLen)
+	{
+		sdkEMVBaseConfigTLV("\xDF\x7F", Simdata.RestrictAID, Simdata.RestrictAIDLen);
+		TraceHex("SetBeforeGPO", "RestrictAID", Simdata.RestrictAID, Simdata.RestrictAIDLen);
+	}
+
+	if(0 != gbctcreadtemplatelen)
+	{
+		if(gbctcreadtemplatelen > 127)
+		{
+			sdkPureSetMemorySlotReadTemplate(gstbctcreadtemplate+4, gbctcreadtemplatelen-4);
+		}
+		else
+		{
+			sdkPureSetMemorySlotReadTemplate(gstbctcreadtemplate+3, gbctcreadtemplatelen-3);
+		}
+	}
+	else
+	{
+		sdkPureFreeMemorySlotReadTemplate();
+	}
+
+	if(0 != gbctcupdatetemplatelen)
+	{
+		if(gbctcupdatetemplatelen <= 127 && gbctcupdatetemplatelen > 0)
+		{
+			ret = sdkPureSetMemorySlotUpdateTemplate(gstbctcupdatetemplate+3, gbctcupdatetemplatelen-3);
+			TraceHex("SetBeforeGPO", "update template", gstbctcupdatetemplate+3, gbctcupdatetemplatelen-3);
+		}
+		else if(gbctcupdatetemplatelen > 127 && gbctcupdatetemplatelen <= 255)
+		{
+			ret =sdkPureSetMemorySlotUpdateTemplate(gstbctcupdatetemplate+4, gbctcupdatetemplatelen-4);
+			TraceHex("SetBeforeGPO", "update template", gstbctcupdatetemplate+4, gbctcupdatetemplatelen-4);
+		}
+		else
+		{
+			ret =sdkPureSetMemorySlotUpdateTemplate(gstbctcupdatetemplate+5, gbctcupdatetemplatelen-5);
+			TraceHex("SetBeforeGPO", "update template", gstbctcupdatetemplate+5, gbctcupdatetemplatelen-5);
+		}
+		Trace("pure-info","sdkPureSetMemorySlotUpdateTemplate ret = %d\r\n", ret);
+	}
+	else
+	{
+		sdkPureFreeMemorySlotUpdateTemplate();
+	}
 
 	Trace("pure-info","finish before GPO set\r\n");
     return SDK_OK;
@@ -2178,15 +2235,20 @@ void PostSetTCPSetting(void)
 	u8 IPAddress[13], port[6];
 	s32 ret,i,j,len;
 	u8 *data_uf, *data_f;
+	_SimData SimData = {0};
 
 	gHostTransType = HOST_TRANS_WIFI;
+
+	ReadSimData(&SimData);
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, "IP Address", SDK_DISP_DEFAULT);
     sdkDispBrushScreen();
 
 	IPAddress[0] = 12;
-	memcpy(IPAddress+1, gTCPAddress, 12);
+//	memcpy(IPAddress+1, gTCPAddress, 12);
+	memcpy(IPAddress+1, SimData.IPAddress, 12);
+
 	sdkKbKeyFlush();
 	ret = sdkKbGetScanf(0, IPAddress, 12, 12, SDK_MMI_NUMBER, SDK_DISP_LINE3);
     Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
@@ -2200,20 +2262,23 @@ void PostSetTCPSetting(void)
         {
             len = 12;
         }
-        memcpy(gTCPAddress, IPAddress + 1, len); //鏈€鍚庝竴涓瓧鑺備负缁撴潫�?\0'
+//		memset(gTCPAddress, 0, 16);
+//        memcpy(gTCPAddress, IPAddress + 1, len);
+        memset(SimData.IPAddress, 0, 16);
+        memcpy(SimData.IPAddress, IPAddress + 1, len);
     }
 	else if(SDK_KEY_ESC == ret)
 	{
 		return ;
 	}
-    TraceHex("emv", "input IPAddress:", gTCPAddress, len);
+    TraceHex("emv", "input IPAddress:", SimData.IPAddress, len);
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Port", SDK_DISP_DEFAULT);
     sdkDispBrushScreen();
 
-	port[0] = IntBitMapLen(gTCPPort);
-	sdkU32ToAsc((u32)gTCPPort, port+1);
+	port[0] = IntBitMapLen(SimData.TCPPort);
+	sdkU32ToAsc((u32)SimData.TCPPort, port+1);
 	sdkKbKeyFlush();
 	ret = sdkKbGetScanf(0, port, 4, 5, SDK_MMI_NUMBER, SDK_DISP_LINE3);
     Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
@@ -2227,15 +2292,17 @@ void PostSetTCPSetting(void)
         {
             len = 5;
         }
-		gTCPPort = convertToUnsignedInt(port + 1, len);
+		SimData.TCPPort = convertToUnsignedInt(port + 1, len);
+//		SimData.TCPPort = gTCPPort;
     }
-    Trace("emv", "input port: %d", gTCPPort);
+    Trace("emv", "input port: %d", SimData.TCPPort);
 
-	data_uf = convertToCString(gTCPAddress, 16);
+	data_uf = convertToCString(SimData.IPAddress, 16);
 	data_f = formatIPAddress(data_uf);
 	Trace("lishiyao", "before removeLeadingZeros IP:%s\r\n", data_f);
 	removeLeadingZeros(data_f);
-	sdkOpenWifi(data_f, gTCPPort);
+	sdkOpenWifi(data_f, SimData.TCPPort);
+	SaveSimData(&SimData);
 }
 
 void PostSetHostCommuType(void)

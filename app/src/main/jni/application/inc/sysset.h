@@ -54,6 +54,10 @@ typedef struct
 	unsigned char MerchantID[15];
 	unsigned char TermType;
 	unsigned char TransCurrencyCode[2];
+	int TCPPort;
+	unsigned char IPAddress[16];
+	unsigned char RestrictAID[16];	//for Implemention 5
+	unsigned char RestrictAIDLen;
 }_SimData;  //最大长度MAXSIMDATALEN,该标签用来设置IC卡tag
 
 EXTERN unsigned char gRupayPRMissKey[16];
@@ -104,6 +108,8 @@ typedef struct
 	unsigned char MTOLLen;
 	unsigned char ATDTOL[64];	//Authentication Transaction Data Tag Object List
 	unsigned char ATDTOLLen;
+	unsigned char TransData[256];	//9F76
+	unsigned char TransDataLen;
 }APPEX_AID_STRUCT;
 
 EXTERN APPEX_AID_STRUCT appex_aid_list[40];

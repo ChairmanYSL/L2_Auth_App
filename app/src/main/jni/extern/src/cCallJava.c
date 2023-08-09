@@ -202,7 +202,7 @@ int InitDeviceOpera()
 //        }
 //    }
     if(OpenWifi == NULL){
-        OpenWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "openTCP","(Ljava/lang/String;I)V");
+        OpenWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "openTCP","(Ljava/lang/String;II)V");
         if (OpenWifi == NULL) {
             (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
             return -2;
@@ -234,7 +234,7 @@ int InitDeviceOpera()
 //    }
 
 	if(ReadWifi == NULL){
-        ReadWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "readTCP","()[B");
+        ReadWifi = (*jniEnv)->GetMethodID(jniEnv, DeviceOpera, "readTCP","([I)[B");
         if (ReadWifi == NULL) {
             (*jniEnv)->DeleteGlobalRef(jniEnv, DeviceOpera);
             return -2;
@@ -582,7 +582,7 @@ void sdkOpenWifi(const char *IPAddress_cString, int port)
 		Trace("JNI", "IPAddress_cString: %s\r\n", IPAddress_cString);
 		javaString = (*jniEnv)->NewStringUTF(jniEnv, IPAddress_cString);
 		Trace("JNI", "after NewStringUTF pointer: %p\r\n", javaString);
-		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port);
+		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port, (jint)1100);
         (*jniEnv)->DeleteLocalRef(jniEnv, javaString);
 	}
 	freeDeviceObject();
@@ -625,6 +625,9 @@ int sdkReadWifiData(unsigned char *data, int maxLen)
 	int result = 1;
 	jbyteArray dataJava;
 	int len;
+	int JavaRes[2]={0};
+	jintArray resJava;
+	jint *resC;
 
     if(DeviceOpera == NULL || mDeviceOpera == NULL)
 	{
@@ -632,16 +635,36 @@ int sdkReadWifiData(unsigned char *data, int maxLen)
     }
 	if(result == 1)
 	{
-		dataJava = (*jniEnv)->CallObjectMethod(jniEnv, mDeviceOpera, ReadWifi);
+		resJava = (*jniEnv)->NewIntArray(jniEnv, 2);
+		if(resJava == NULL)
+		{
+			return -2;
+		}
+		dataJava = (*jniEnv)->CallObjectMethod(jniEnv, mDeviceOpera, ReadWifi, resJava);
 //		Trace("jni", "C receive data pointer = %p\r\n", dataJava);
 		if(dataJava != NULL)
 		{
-			len = (*jniEnv)->GetArrayLength(jniEnv, dataJava);
+//			len = (*jniEnv)->GetArrayLength(jniEnv, dataJava);
+//
+//			if(len > maxLen)
+//			{
+//				len = maxLen;
+//			}
+
+			resC = (*jniEnv)->GetIntArrayElements(jniEnv,resJava,NULL);
+			if(resC[0] != 0)
+			{
+				return resC[0];
+			}
+			len = resC[1];
+			Trace("jni", "C receive data len = %d\r\n", len);
+
 			if(len > maxLen)
 			{
 				len = maxLen;
 			}
 			(*jniEnv)->GetByteArrayRegion(jniEnv,dataJava, 0,  len, (jbyte*)data);
+
 			return len;
 		}
 		else
