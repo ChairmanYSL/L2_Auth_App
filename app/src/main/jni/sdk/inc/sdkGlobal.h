@@ -11,6 +11,8 @@
 #define SDK_EBUSY                    (-6)       /* 设备忙 */
 #define SDK_EIO                      (-7)       /* 设备未打开 */
 #define SDK_EDATA                    (-8)       /* 数据溢出或数据错误 */
+#define SDK_ICC_NOCARD				 (-9)
+#define SDK_ICC_MUTICARD			 (-10)
 
 #include <stdio.h>
 #include <string.h>

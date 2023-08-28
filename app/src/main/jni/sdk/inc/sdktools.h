@@ -32,11 +32,8 @@ enum SDK_ALIGN_MODE
     SDK_BOTH = SDK_SYS_RET_OK_MIN + 3                              // 两边//both sides
 };                                                                  // 删除的空格位置或填补后的对齐方式AlignMode(对齐方式)：//the place of deleted bland space or align mode after filling
 
-extern void sdkmSleep(const s32 siMs);
-extern s32 sdkGetRandom(u8 *pheRdm, s32 siNum);
 extern bool sdkDf(const u8 *pasDiskCata, s32 *psiAvailSize, s32 *psiUsedSize, s32 *psiUsedRate);
 
-extern s32 sdkReadPosSn(u8 *pasDest);
 extern s32 sdkGetRtc(u8 *pbcDest);
 extern s32 sdkSetRtc(const u8 *pbcSrc);
 

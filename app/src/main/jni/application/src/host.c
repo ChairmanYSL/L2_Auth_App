@@ -1938,7 +1938,6 @@ void BCTCPostUpDateParam(void)
         sdkDispFillRowRam(SDK_DISP_LINE3, 0, DISP_BCTCHOSTMENU2, SDK_DISP_LEFT_DEFAULT);
         sdkDispFillRowRam(SDK_DISP_LINE4, 0, DISP_BCTCHOSTMENU3, SDK_DISP_LEFT_DEFAULT);
         sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_BCTCHOSTMENU4, SDK_DISP_LEFT_DEFAULT);
-        sdkDispFillRowRam(SDK_DISP_LINE_MAX, 0, DISP_BCTCHOSTMENU5, SDK_DISP_LEFT_DEFAULT);
 
 		sdkDispBrushScreen();
 
@@ -3064,6 +3063,8 @@ s32 BCTCStartTrade(void)
     u16 rsplen;
     u8 fn[64] = {0};
 
+	Trace("Host", "Start BCTCStartTrade\r\n");
+
     memset(&gstbctcautotrade, 0, sizeof(gstbctcautotrade));
 
     MsgType = BCTC_MNG_StartTrade_SEND;
@@ -3421,7 +3422,7 @@ void BCTCSendOutCome(void)
 	memcpy(ComPackSend+ComPackSendLen, gstOutcome.RemovalTimeout, 2);
 	ComPackSendLen+=2;
 
-//	ret = BCTCSendData(ComPackSend, ComPackSendLen);
+	ret = BCTCSendData(ComPackSend, ComPackSendLen);
 //	CloseComm();
 }
 
@@ -3479,7 +3480,7 @@ void BCTCSendUIRequest(int type)
 	memcpy(ComPackSend+ComPackSendLen, gstUIRequest.CurrencyCode, 2);
 	ComPackSendLen += 2;
 
-//	ret = BCTCSendData(ComPackSend, ComPackSendLen);
+	ret = BCTCSendData(ComPackSend, ComPackSendLen);
 //	CloseComm();
 }
 

@@ -2,6 +2,9 @@
 #include "host.h"
 #include "sdkpure.h"
 #include "emv_type.h"
+#include "sdkoutcome.h"
+#include "extern.h"
+#include "extern_api.h"
 //#include "dlljcbprivate.h"
 
 
@@ -492,6 +495,7 @@ s32 ReadCardDisp()
 		}
 		else//The first prompt to read the card
 		{
+			Trace("app", "gDispSecondTap = %d\r\n", gDispSecondTap);
 			if(gDispSecondTap)
 			{
 				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Additional Tap", SDK_DISP_DEFAULT);
@@ -680,28 +684,20 @@ s32 IccReadCard()
     timeoutvalue = 10 * 1000;
 	sdkTimerStar(timeoutvalue);
 
-	sdkIccOpenRfDev();
-	rslt = sdkIccResetIcc();
-	Trace("read card", "sdkIccResetIcc ret = %d\r\n", rslt);
-	if(rslt > 2)
-	{
-		return SDK_OK;
-	}
-	else if(rslt < 0)
+	rslt = sdkIccOpenRfDev();
+	if(rslt != 0)
 	{
 		return SDK_ERR;
 	}
-	else if(rslt == 2)
-	{
-		gCollisionflag = 1;
-		gCollisionCounter++;
-		return SDK_EQU;
-	}
-	else
+
+	rslt = sdkIccPowerOnAndSeek();
+	Trace("read card", "sdkIccResetIcc ret = %d\r\n", rslt);
+	if(rslt != SDK_OK)
 	{
 		return rslt;
 	}
 
+	return SDK_OK;
 }
 
 s32 InputCreditPwd(const u8 *bcdTradeAmount, u8 PINTryCount, u8 IccEncryptWay, u8 *pCreditPwd)
@@ -1186,6 +1182,7 @@ s32 DealTrade(void)
 	u8 FlowContinueFlag = 1;
 	u8 AmountBCD[6], Passwd[64];
 	s32 len;
+	u8 trendit_dir[]="/sdcard/pure/";
 
 	gCollisionflag = 0;
 	gCollisionCounter = 0;
@@ -1202,6 +1199,7 @@ _RETRY:
 
 	memset(gstResponseCode,0,sizeof(gstResponseCode));
 
+	sdkSysSetCurAppDir(trendit_dir, strlen(trendit_dir));
 	sdkEMVBaseTransInit();
 	sdkPureTransInit();
 	sdkPureSetSendOutcome(BCTCSendOutCome);
@@ -1217,16 +1215,22 @@ _SECONDTAP:
 		{
 			break;
 		}
-		else if(SDK_EQU == ret)
+		else if(SDK_ICC_MUTICARD == ret)
 		{
 			sdkTestIccDispText("Multi Card Collision");
 			sdkIccPowerDown();
+			gCollisionflag = 1;
+			gCollisionCounter++;
 			sdkmSleep(1000);
 		}
 		else if(SDK_ERR == ret)
 		{
 			sdkTestIccDispText("Read Card error,Tx Stop");
 			return ret;
+		}
+		else if(SDK_ICC_NOCARD == ret)
+		{
+			return SDK_OK;
 		}
 		else
 		{
@@ -1235,6 +1239,12 @@ _SECONDTAP:
 	}
 
 	ImportTradeAmount();
+
+	ret = sdkIccResetIcc();
+	if(ret != SDK_OK)
+	{
+		return SDK_ERR;
+	}
 
 	while(FlowContinueFlag)
 	{

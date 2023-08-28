@@ -3,7 +3,7 @@
 #include "extern.h"
 //#include <stdarg.h>
 #include <sys/stat.h>
-//#include <unistd.h>
+#include <unistd.h>
 #include <stdio.h>
 //#include <stdlib.h>
 
@@ -13,18 +13,14 @@
 #include <fcntl.h>
 #include <dlfcn.h>
 #include <string.h>
+#include "ddi_icc.h"
+#include "ddi_result.h"
+#include "ddi_manage.h"
 
 
 
 #define  LOG_TAG    "PUREEMVCORE"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-
-
-int sdkIccCloseRfDev(void)
-{
-	return 0;
-}
-
 
 int sdkIccDispRfLogo()
 {
@@ -65,8 +61,10 @@ bool  sdkSysBeep(int eType)
 	return true;
 }
 
-void sdkDispClearScreen(){
-    clearLcdLine(0, 5);
+void sdkDispClearScreen()
+{
+	Trace(ptag, arg...)
+	clearLcdLine(0, 4);
 }
 int sdkDispFillRowRam(int siRow, int siColid, const unsigned char *pasStr, unsigned int ucAtr){
 
@@ -129,6 +127,36 @@ s32 sdkSysGetColorValue(SDK_COLOR_ID eColorId)
     }
 
     return SDK_ERR;
+}
+
+u32 sdkTimerGetId(void)
+{
+    u32 sys_tick;
+
+    if( DDI_OK == ddi_sys_get_tick(&sys_tick) )
+    {
+        return sys_tick;
+    }
+    else
+    {
+        Assert(0);
+        return 0;
+    }
+}
+
+
+void sdkmSleep(const s32 siMs)
+{
+    u32 timeid1, timeid2;
+
+//    ddi_sys_msleep(siMs);
+    timeid1 = sdkTimerGetId();
+    while(1){
+        timeid2 = sdkTimerGetId();
+        if((timeid2 - timeid1) > siMs){
+            break;
+        }
+    }
 }
 
 void sdkDev_Printf(char *fmt, ...)
@@ -312,4 +340,206 @@ void HostOutcomeTest(void)
 	sdkmSleep(5000);
 	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	BCTCSendUIRequest(PURE_UIREQ_RESTART);
+}
+
+void *sdkGetMem(unsigned int size)
+{
+	return ddi_k_malloc(size);
+}
+
+int sdkFreeMem(void *ap )
+{
+    ddi_k_free(ap);
+    return 1;
+}
+
+int sdkGetRandom(unsigned char *pheRdm, int siNum)
+{
+	u16 outlen;
+	ddi_manage_get_random((u16)siNum, pheRdm,&outlen);
+	TraceHex("ddi", "random:", pheRdm, outlen);
+    return SDK_OK;
+}
+
+
+#define SLOT_RF_CARD 0x04
+
+int sdkIccOpenRfDev()
+{
+	return ddi_icc_open(SLOT_RF_CARD);
+}
+
+int sdkIccPowerOnAndSeek()
+{
+	u8 buf[6];
+	int ret;
+
+	memset(buf, 0, sizeof(buf));
+	ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
+	Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
+	Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
+	if(ret != 0x00)
+	{
+		SDK_ERR;
+	}
+
+	if(buf[1] == 0x00)
+	{
+		return SDK_ICC_NOCARD;
+	}
+	else if(buf[1] == 0x02)
+	{
+		return SDK_ICC_MUTICARD;
+	}
+	if(buf[1] == 0x03 || buf[1] == 0x04)
+	{
+		return SDK_OK;
+	}
+	else
+	{
+		return SDK_ERR;
+	}
+}
+
+int sdkIccResetIcc()
+{
+	u8 atr[100]={0};
+	u8 len,ic_card_type;
+	int ret;
+
+	ret = ddi_icc_power_on(SLOT_RF_CARD, 0x06, atr, &len, &ic_card_type);
+	if(0x00 == ret)
+	{
+		return SDK_OK;
+	}
+	else
+	{
+		return SDK_ERR;
+	}
+}
+
+int sdkIccPowerDown()
+{
+	return ddi_icc_power_off(0x06);
+}
+
+int sdkIccCloseRfDev(void)
+{
+	return ddi_icc_close(SLOT_RF_CARD);
+}
+
+int sdkIccRemoveCard(void)
+{
+	return ddi_icc_rf_remove();
+}
+
+void APDUTest(void)
+{
+	s32 key,ret;
+	u8 detect_card_flag=0;
+	u8 ppse_cmd[]="\x00\xA4\x04\x00\x0E\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31\x00";
+	u8 ppse_rsp[64]={0};
+	u16 recv_len=10;
+
+	sdkDispClearScreen();
+	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Plz tap card", SDK_DISP_DEFAULT);
+	sdkDispBrushScrecen();
+
+	ret = sdkIccOpenRfDev();
+	Trace("test", "sdkIccOpenRfDev ret = %d\r\n", ret);
+	if(ret != 0)
+	{
+		sdkDispClearRow(SDK_DISP_LINE2);
+		sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Open RF fail", SDK_DISP_DEFAULT);
+		sdkDispBrushScrecen();
+	}
+	else
+	{
+		sdkDispClearRow(SDK_DISP_LINE2);
+		sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Open RF success", SDK_DISP_DEFAULT);
+		sdkDispBrushScrecen();
+	}
+
+	while (1)
+	{
+		sdkmSleep(1000);
+		key = sdkKbGetKey();
+		if(SDK_KEY_ESC == key)
+		{
+			return;
+		}
+
+		ret = sdkIccPowerOnAndSeek();
+		Trace("test", "sdkIccPowerOnAndSeek ret = %d\r\n", ret);
+		if(ret == SDK_OK)
+		{
+			sdkDispClearRow(SDK_DISP_LINE3);
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Check Card success", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+			detect_card_flag = 1;
+			break;
+		}
+		else if(SDK_ICC_MUTICARD == ret)
+		{
+			sdkDispClearRow(SDK_DISP_LINE3);
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Multi card collision", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+		}
+		else if(SDK_ICC_NOCARD == ret)
+		{
+			continue;
+		}
+		else
+		{
+			sdkDispClearRow(SDK_DISP_LINE3);
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Check Card error", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+			break;
+		}
+
+	}
+
+	if(detect_card_flag)
+	{
+		ret = sdkIccResetIcc();
+		Trace("test", "sdkIccResetIcc ret = %d\r\n", ret);
+		if(ret == 0)
+		{
+			sdkDispClearRow(SDK_DISP_LINE4);
+			sdkDispFillRowRam(SDK_DISP_LINE4, 0, "Reset card success", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+
+			ret = ddi_icc_trans_apdu(0x04, ppse_cmd, 20, ppse_rsp, &recv_len);
+			Trace("test", "ddi_icc_trans_apdu ret = %d\r\n", ret);
+		}
+		else
+		{
+			sdkDispClearRow(SDK_DISP_LINE4);
+			sdkDispFillRowRam(SDK_DISP_LINE4, 0, "Reset card fail", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+		}
+	}
+
+	return;
+}
+
+void RandNumTest(void)
+{
+	u8 randnum[4]={0};
+	int ret=8751;
+
+	ret = sdkGetRandom(randnum, 4);
+	Trace("test", "sdkGetRandom ret = %d\r\n", ret);
+}
+
+void ReadSNTest(void)
+{
+	u16 outlen=64;
+	u8 pasDest[64];
+	int ret;
+
+	ret = ddi_manage_get_sn(pasDest, &outlen);
+	Trace("test", "ddi_manage_get_sn ret = %d\r\n", ret);
+	Trace("test", "SN Len = %d\r\n", outlen);
+//	TraceHex("test", "SN", pasDest, outlen);
 }

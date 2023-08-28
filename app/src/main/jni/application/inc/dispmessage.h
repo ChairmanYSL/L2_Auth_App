@@ -22,10 +22,9 @@
 
 #define DISP_BCTCHOSTMENU "BCTC Param Download"
 #define DISP_BCTCHOSTMENU1 "1.CAPK 2.AID"
-#define DISP_BCTCHOSTMENU2 "3.Terminal Param"
-#define DISP_BCTCHOSTMENU3 "4.Black List"
-#define DISP_BCTCHOSTMENU4 "5.Revo PK 6.Init All Data"
-#define DISP_BCTCHOSTMENU5 "7.Template 8.Communicate Type"
+#define DISP_BCTCHOSTMENU2 "3.TermPar 4.BlackList"
+#define DISP_BCTCHOSTMENU3 "5.Revo PK 6.Init All Data"
+#define DISP_BCTCHOSTMENU4 "7.Template 8.Communicate Type"
 
 
 #define DISP_SETSWITCH	"Func Switch Setting"

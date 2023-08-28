@@ -405,53 +405,6 @@ int getBeeper(int timer){
     return result;
 }
 
-int sdkIccOpenRfDev()
-{
-    jint result = 1;
-
-    if(DeviceOpera == NULL || mDeviceOpera == NULL) {
-        result = InitDeviceOpera();
-    }
-
-    if (result == 1) {
-        result = (*jniEnv)->CallIntMethod(jniEnv, mDeviceOpera, openRF);
-    }
-    freeDeviceObject();
-    return (int)result;
-
-}
-
-int sdkIccResetIcc()
-{
-    int result = 1;
-
-    if(DeviceOpera == NULL || mDeviceOpera == NULL) {
-        result = InitDeviceOpera();
-    }
-
-    if (result == 1) {
-    	result= (*jniEnv)->CallIntMethod(jniEnv, mDeviceOpera, ResetRF);
-    }
-    freeDeviceObject();
-    return result;
-}
-
-int sdkIccPowerDown()
-{
-    int result = 1;
-
-    if(DeviceOpera == NULL || mDeviceOpera == NULL) {
-        result = InitDeviceOpera();
-    }
-
-    if (result == 1) {
-		result = 0;
-        (*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, CloseRF);
-    }
-    freeDeviceObject();
-    return result;
-}
-
 int sdkCommOpenUart()
 {
     jint portId = -10;

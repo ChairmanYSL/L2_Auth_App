@@ -1,6 +1,12 @@
 #ifndef SDKDEBUG_H
 #define SDKDEBUG_H
 
+#ifdef __cplusplus
+#if __cplusplus
+extern "C" {
+#endif
+#endif /* __cplusplus */
+
 #define ZT_SDK_DEBUG
 //#undef ZT_SDK_DEBUG
 
@@ -21,5 +27,12 @@ extern void SdkDebugTrace(u8 const *pasTag, u8 const*  pasFile, u8 const *pFun, 
 #define Assert(exp)
 #define Verify(exp)    ((void)(exp))
 #endif
+
+#ifdef __cplusplus
+#if __cplusplus
+extern "C" {
+#endif
+#endif /* __cplusplus */
+
 
 #endif

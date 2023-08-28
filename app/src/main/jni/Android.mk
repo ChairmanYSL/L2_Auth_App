@@ -20,10 +20,17 @@ LOCAL_MODULE := szzt_purejni
 LOCAL_SRC_FILES := sdk/externlib/libszzt_sdkpure.so
 include $(PREBUILT_SHARED_LIBRARY)
 
+#ddi
+include $(CLEAR_VARS)
+LOCAL_MODULE := trendit_ddi
+LOCAL_SRC_FILES := sdk/externlib/lib_ddi.so
+include $(PREBUILT_SHARED_LIBRARY)
+
 ### sdkemvtest
 include $(CLEAR_VARS)
 LOCAL_MODULE    := sdkemvtest
 
+#################################################include
 ##export
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/export
 
@@ -43,6 +50,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllemvbase/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllemvmath/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllpure/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllpure/privateinc
+
+########################################################################source code
 
 ### extern
 MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/extern/devapi/*.c)
@@ -67,6 +76,7 @@ MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/sdk/libsdk*/*/*/*/*.c)
 LOCAL_SRC_FILES := $(MY_CPP_LIST:$(LOCAL_PATH)/%=%)
 
 LOCAL_SHARED_LIBRARIES += szzt_purejni
+LOCAL_SHARED_LIBRARIES += trendit_ddi
 
 # LOCAL_STATIC_LIBRARIES += android_support
 LOCAL_CFLAGS := -DANDROID

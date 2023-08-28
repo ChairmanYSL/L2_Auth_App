@@ -319,16 +319,16 @@ public class DeviceOpera {
         udpManager.closeConnection();
     }
 
-    public void openTCP(String IP, int port) throws IOException {
-        tcpClient.connect(IP,port);
+    public void openTCP(String IP, int port, int bufferSize) throws IOException {
+        tcpClient.connect(IP,port,bufferSize);
     }
 
     public void sendTCP(byte [] data, int len) throws IOException {
         tcpClient.send(data);
     }
 
-    public byte[] readTCP() throws IOException {
-        return tcpClient.read();
+    public byte[] readTCP(int[] res) throws IOException {
+        return tcpClient.read(res);
     }
 
     public void closeTCP() throws IOException {

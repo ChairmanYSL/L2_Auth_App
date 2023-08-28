@@ -23,41 +23,41 @@ int Menu0()
 
     while(1)
     {
-		if(gstAutoTest)
-		{
-			rslt = BCTCStartTrade();
-
-			if( rslt!= SDK_OK)
-			{
-				gstAutoTest = 0;
-				key = SDK_KEY_ESC;
-				goto _RETURN;
-			}
-			else
-			{
-				memset(gstasAmount, 0, sizeof(gstasAmount));
-				if(gstbctcautotrade.amountexit)	//后台传9F02时用后台的金额
-				{
-					sdkBcdToAsc(gstasAmount, gstbctcautotrade.amount, 6);
-				}
-				else	//后台没传9F02，默认金额一分钱
-				{
-					memcpy(gstasAmount, "000000000001", 12);
-				}
-
-				if(gstbctcautotrade.otheramountexit)	//后台传9F03时用后台的金额
-				{
-					memcpy(gbcOtherAmount, gstbctcautotrade.otheramount, 6);
-				}
-				else	//后台没传9F03，默认为0
-				{
-					memset(gbcOtherAmount, 0, 6);
-				}
-
-				DealTrade();
-                goto _RETURN;
-			}
-		}
+//		if(gstAutoTest)
+//		{
+//			rslt = BCTCStartTrade();
+//
+//			if( rslt!= SDK_OK)
+//			{
+//				gstAutoTest = 0;
+//				key = SDK_KEY_ESC;
+//				goto _RETURN;
+//			}
+//			else
+//			{
+//				memset(gstasAmount, 0, sizeof(gstasAmount));
+//				if(gstbctcautotrade.amountexit)	//后台传9F02时用后台的金额
+//				{
+//					sdkBcdToAsc(gstasAmount, gstbctcautotrade.amount, 6);
+//				}
+//				else	//后台没传9F02，默认金额一分钱
+//				{
+//					memcpy(gstasAmount, "000000000001", 12);
+//				}
+//
+//				if(gstbctcautotrade.otheramountexit)	//后台传9F03时用后台的金额
+//				{
+//					memcpy(gbcOtherAmount, gstbctcautotrade.otheramount, 6);
+//				}
+//				else	//后台没传9F03，默认为0
+//				{
+//					memset(gbcOtherAmount, 0, 6);
+//				}
+//
+//				DealTrade();
+//                goto _RETURN;
+//			}
+//		}
 //		else
 //		{
 //			sdkmSleep(1500);
@@ -91,17 +91,13 @@ int Menu0()
 //				sdkmSleep(1500);
 //			}
 //		}
-
+		sdkmSleep(500);
         key = sdkKbGetKey();
-//        if(key)
-//        {
-//            Trace("test", "key=%d\r\n", key);
-//        }
-//        if(key == SDK_KEY_ESC)
-//        {
-//			gstAutoTest = 0;
-//            Trace("test", "gstAutoTest = %d \r\n", gstAutoTest);
-//        }
+        if(key)
+        {
+            Trace("test", "key=%04X\r\n", key);
+        }
+
 
         switch(key)
         {
@@ -271,19 +267,22 @@ int Menu1()
     return SDK_KEY_ESC;
 }
 
-s32 Menu2()
+s32 MenuTest()
 {
-	Trace("app", "goto Menu2\r\n");
+	Trace("app", "goto MenuTest\r\n");
 	int key;
 	s32 rslt = 0;
 	sdkDispClearScreen();
 	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Test Menu", SDK_DISP_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.Version 2.Add Test AID", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "3.Send TCP 4.Outcome", SDK_DISP_LEFT_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE4, 0, "5.APDU 6.Random", SDK_DISP_LEFT_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE5, 0, "7.SN", SDK_DISP_LEFT_DEFAULT);
 	sdkDispBrushScreen();
 
 	sdkKbKeyFlush();
 	key = sdkKbWaitKey(SDK_KEY_MASK_ALL, 0);
+	Trace("app", "key = %04x\r\n", key);
 
 	switch ( key )
 	{
@@ -301,6 +300,18 @@ s32 Menu2()
 
 		case SDK_KEY_4:
 			HostOutcomeTest();
+			break;
+
+		case SDK_KEY_5:
+			APDUTest();
+			break;
+
+		case SDK_KEY_6:
+			RandNumTest();
+			break;
+
+		case SDK_KEY_7:
+			ReadSNTest();
 			break;
 
 		case SDK_KEY_ENTER:

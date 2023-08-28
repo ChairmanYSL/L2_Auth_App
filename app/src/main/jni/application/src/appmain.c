@@ -24,7 +24,7 @@ static void AppSysmain(void)
                break;
 
              case 2:
-               key = Menu2();
+               key = MenuTest();
                break;
 
              default:
