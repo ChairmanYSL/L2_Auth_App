@@ -1,0 +1,1 @@
+COPY .\libs\armeabi-v7a\* ..\libs\armeabi-v7a
