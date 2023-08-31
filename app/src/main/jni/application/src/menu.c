@@ -91,6 +91,9 @@ int Menu0()
 //				sdkmSleep(1500);
 //			}
 //		}
+
+//		get_time_value(temp);
+//		sdkDispFillRowRam(SDK_DISP_LINE5, 0, temp, SDK_DISP_DEFAULT);
 		sdkmSleep(500);
         key = sdkKbGetKey();
         if(key)
@@ -118,7 +121,7 @@ int Menu0()
 				}
 
 				memset(gstasAmount, 0, sizeof(gstasAmount));
-				if(gstbctcautotrade.amountexit)	//后台传9F02时用后台的金额
+				if(gstbctcautotrade.amountexist)	//后台传9F02时用后台的金额
 				{
 					sdkBcdToAsc(gstasAmount, gstbctcautotrade.amount, 6);
 				}
@@ -127,7 +130,7 @@ int Menu0()
 					memcpy(gstasAmount, "000000000001", 12);
 				}
 
-				if(gstbctcautotrade.otheramountexit)	//后台传9F03时用后台的金额
+				if(gstbctcautotrade.otheramountexist)	//后台传9F03时用后台的金额
 				{
 					memcpy(gbcOtherAmount, gstbctcautotrade.otheramount, 6);
 				}
@@ -175,7 +178,7 @@ int Menu0()
                break;
         }
 
-        sdkmSleep(1100);//for G201
+//        sdkmSleep(1100);//for G201
     }
 
 _RETURN:

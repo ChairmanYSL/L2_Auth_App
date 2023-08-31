@@ -2025,7 +2025,7 @@ s32 IccSetAIDEX()
         return SDK_OK;
     }
 
-	if(gstbctcautotrade.typeexit)
+	if(gstbctcautotrade.typeexist)
 	{
 		sdkEMVBaseConfigTLV("\x9C", &gstbctcautotrade.transtype, 1);
 	}

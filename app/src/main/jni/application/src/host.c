@@ -3104,7 +3104,9 @@ s32 BCTCStartTrade(void)
     ComPackRecv = (u8*)sdkGetMem(BCTC_RECV_LEN);
     memset(ComPackRecv, 0, BCTC_RECV_LEN);
 
+	Trace("Host", "Start BCTCRecvData\r\n");
     len = BCTCRecvData(ComPackRecv, BCTC_RECV_LEN);
+	Trace("Host", "BCTCRecvData ret = %d\r\n", len);
 
     if(len <= 0)
     {
@@ -3139,7 +3141,7 @@ s32 BCTCStartTrade(void)
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
-            gstbctcautotrade.amountexit = 1;
+            gstbctcautotrade.amountexist = 1;
             memcpy(gstbctcautotrade.amount, pb, 6);
             TraceHex("", "amount ", pb, 6);
         }
@@ -3155,7 +3157,7 @@ s32 BCTCStartTrade(void)
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
-            gstbctcautotrade.otheramountexit = 1;
+            gstbctcautotrade.otheramountexist = 1;
             memcpy(gstbctcautotrade.otheramount, pb, 6);
             TraceHex("", "otheramount ", pb, 6);
         }
@@ -3171,10 +3173,46 @@ s32 BCTCStartTrade(void)
                 return SDK_ERR;
             }
             pb = TlvVPtr(pbTlv);
-            gstbctcautotrade.typeexit = 1;
+            gstbctcautotrade.typeexist = 1;
             memcpy(&gstbctcautotrade.transtype, pb, 1);
             Trace("BCTC", "trans type = %02X\r\n", gstbctcautotrade.transtype);
         }
+
+        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x5F2A);
+
+        if(pbTlv != NULL)
+        {
+            rsplen = TlvLen(pbTlv);
+
+            if(rsplen != 2)
+            {
+                sdkFreeMem(ComPackRecv);
+                return SDK_ERR;
+            }
+            pb = TlvVPtr(pbTlv);
+            gstbctcautotrade.currcodeexist = 1;
+            memcpy(&gstbctcautotrade.currencycode, pb, 2);
+            TraceHex("BCTC", "trans currency code", gstbctcautotrade.currencycode, 2);
+        }
+
+        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x5F36);
+
+        if(pbTlv != NULL)
+        {
+            rsplen = TlvLen(pbTlv);
+
+            if(rsplen != 1)
+            {
+                sdkFreeMem(ComPackRecv);
+                return SDK_ERR;
+            }
+            pb = TlvVPtr(pbTlv);
+            gstbctcautotrade.currexpexist = 1;
+            memcpy(&gstbctcautotrade.currexp, pb, 1);
+            Trace("BCTC", "trans currency exponent = %02X\r\n", gstbctcautotrade.currexp);
+        }
+
+
         pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0xDF8106);
 
         if(pbTlv != NULL)
@@ -3248,6 +3286,7 @@ s32 BCTCStartTrade(void)
     return SDK_OK;
 }
 
+#if 0
 s32 BCTCSingleTrade(void)
 {
     u8 BCDComPackRecv[64]={0};
@@ -3354,7 +3393,7 @@ s32 BCTCSingleTrade(void)
     }
     return SDK_OK;
 }
-
+#endif
 
 void BCTCSendOutCome(void)
 {

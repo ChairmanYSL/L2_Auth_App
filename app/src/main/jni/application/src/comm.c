@@ -1,5 +1,11 @@
 #include "appglobal.h"
 #include "sdkoutcome.h"
+#include <fcntl.h>
+#include <termios.h>
+#include <unistd.h>
+#include <errno.h>
+#include "sdkDebug.h"
+
 
 #define WAITSIO0    0
 #define WAITSIO1    1
@@ -9,14 +15,112 @@
 
 s32 OpenComm()
 {
+	u8 name[]="/dev/ttyGS8";
+#if 0
     return sdkCommOpenUart(NULL);
+#else
+	return serial_open(name, 115200);
+//	return SdkOpenComm();
+#endif
 }
 
 s32 CloseComm()
 {
+	u8 name[]="/dev/ttyGS8";
+#if 0
     return sdkCommCloseUart(0);
+#else
+	serial_close(gSerialPortId);
+//	return SdkCloseComm(gSerialPortId);
+#endif
 }
 
+s32 SdkOpenComm()
+{
+
+	int fd;
+	struct termios options={0};
+
+	fd = open("/dev/ttyGS8", O_RDWR | O_NOCTTY);
+	Trace("Comm", "open fd = %d\r\n", fd);
+	if (fd == -1)
+	{
+	    Trace("Comm", "open_port: Unable to open /dev/ttyGS8 - \r\n");
+		return SDK_ERR;
+	}
+
+		// 获取当前设置
+	tcgetattr(fd, &options);
+
+	// 设置波特率
+	cfsetispeed(&options, B9600);
+	cfsetospeed(&options, B9600);
+
+	// 设置数据位，停止位等
+	options.c_cflag |= (CLOCAL | CREAD);
+	options.c_cflag &= ~PARENB; // 无奇偶校验
+	options.c_cflag &= ~CSTOPB; // 1 停止位
+	options.c_cflag &= ~CSIZE;	// 清除数据位设置
+	options.c_cflag |= CS8; 	// 8 数据位
+
+	// 应用设置
+	tcsetattr(fd, TCSANOW, &options);
+
+	return fd;
+}
+
+s32 SdkCloseComm(int fd)
+{
+	serial_close(fd);
+//	close(fd);
+}
+
+s32 SdkCommWrite(int fd, unsigned char *buf, int sendLen)
+{
+	int ret;
+	Trace("Comm", "input fd = %d\r\n", fd);
+	TraceHex("Comm", "input buf", buf, sendLen);
+//	ret = write(fd, buf, sendLen);
+	ret = serial_send(fd, buf, sendLen);
+	Trace("Comm", "write ret = %d\r\n", ret);
+	return ret;
+}
+
+#if 0
+s32 SdkCommRead(int fd, unsigned char *buf, int readLen)
+{
+
+	int bytes_read = read(fd, buf, readLen);
+	Trace("Comm", "read ret = %d\r\n", bytes_read);
+	if(bytes_read < 0)
+	{
+		Trace("Comm", "read comm error\r\n");
+		return SDK_ERR;
+	}
+	else
+	{
+		return bytes_read;
+	}
+}
+#else
+s32 SdkCommRead(int fd, unsigned char *buf, int readLen)
+{
+	return serial_receve(fd, buf, readLen, 300);
+}
+#endif
+
+
+bool SdkCommGetStatus()
+{
+	if(gSerialPortId < 0)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
 
 s32 BCTCSendData(unsigned char* buf, unsigned short len)
 {
@@ -48,7 +152,8 @@ s32 BCTCSendData(unsigned char* buf, unsigned short len)
 
 	if(HOST_TRANS_SERIAL == gHostTransType)
 	{
-		ret = sdkCommUartSendData(gSerialPortId, tempbuf, len + 3);
+//		ret = sdkCommUartSendData(gSerialPortId, tempbuf, len + 3);
+		ret = SdkCommWrite(gSerialPortId, tempbuf, len + 3);
 		Trace("app","send_data return %d\r\n",ret);
 	}
 	else if(HOST_TRANS_WIFI == gHostTransType)
@@ -111,9 +216,13 @@ s32 BCTCRecvDatatemp(u8 *buf, int maxsizelen)
 
 s32 BCTCRecvData(u8 *buf, int maxsizelen)
 {
+	Trace("Host", "gHostTransType = %d\r\n", gHostTransType);
+	Trace("Host", "gSerialPortId = %d\r\n", gSerialPortId);
+
 	if(HOST_TRANS_SERIAL == gHostTransType)
 	{
-		return sdkCommUartRecvData(gSerialPortId, buf, maxsizelen, 1000);
+//		return sdkCommUartRecvData(gSerialPortId, buf, maxsizelen, 1000);
+		return SdkCommRead(gSerialPortId, buf, maxsizelen);
 	}
 	else if(HOST_TRANS_WIFI == gHostTransType)
 	{

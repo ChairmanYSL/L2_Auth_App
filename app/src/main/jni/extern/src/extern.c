@@ -3,6 +3,7 @@
 #include "extern.h"
 //#include <stdarg.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <stdio.h>
 //#include <stdlib.h>
@@ -16,17 +17,113 @@
 #include "ddi_icc.h"
 #include "ddi_result.h"
 #include "ddi_manage.h"
-
-
+#include <signal.h>
+#include <time.h>
 
 #define  LOG_TAG    "PUREEMVCORE"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+
+static volatile int timer_expired = 0;
+static timer_t timerID;
+
+
+void timer_handler(int signum)
+{
+    timer_expired = 1;
+	 timer_delete(timerID);
+}
+
+#if 0
+int set_timer(int milliseconds)
+{
+    struct sigaction sa;
+    struct itimerspec timerSpec;
+
+    // 清除之前的定时器状态
+    timer_expired = 0;
+
+    // 设置信号处理函数
+    memset(&sa, 0, sizeof (sa));
+    sa.sa_handler = &timer_handler;
+    sigaction(SIGALRM, &sa, NULL);
+
+    // 创建定时器
+    if(timer_create(CLOCK_REALTIME, NULL, &timerID) == -1)
+	{
+        Trace("ddi", "timer_create");
+        return -1;
+    }
+
+    // 设置定时器
+    timerSpec.it_value.tv_sec = milliseconds / 1000;
+    timerSpec.it_value.tv_nsec = (milliseconds % 1000) * 1000000;
+    timerSpec.it_interval.tv_sec = 0;
+    timerSpec.it_interval.tv_nsec = 0;
+
+    if(timer_settime(timerID, 0, &timerSpec, NULL) == -1)
+	{
+        Trace("ddi", "timer_settime");
+        return -1;
+    }
+
+    return 0;
+}
+#endif
+
+u32 sdkTimerGetId(void)
+{
+    u32 sys_tick;
+
+    if( DDI_OK == ddi_sys_get_tick(&sys_tick) )
+    {
+        return sys_tick;
+    }
+    else
+    {
+        Assert(0);
+        return 0;
+    }
+}
+
+
+// 查询定时器是否过时
+int is_timer_expired()
+{
+	if(timer_expired)
+	{
+
+	}
+    return timer_expired;
+}
+
+int get_time_value(u8 *time)
+{
+	struct timeval tv;
+	struct tm *tm;
+
+    if (gettimeofday(&tv, NULL) == -1)
+	{
+        Trace("ddi", "gettimeofday error");
+        return SDK_ERR;
+    }
+
+    tm = localtime(&tv.tv_sec);
+    if (tm == NULL)
+	{
+        Trace("ddi", "localtime error");
+        return SDK_ERR;
+    }
+
+	strftime(time, 128, "%Y-%m-%d- %H:%M:%S", tm);
+
+	return SDK_OK;
+}
+
 
 int sdkIccDispRfLogo()
 {
 	return 0;
 }
-
 
 int sdkKbGetKey(void)
 {
@@ -63,7 +160,6 @@ bool  sdkSysBeep(int eType)
 
 void sdkDispClearScreen()
 {
-	Trace(ptag, arg...)
 	clearLcdLine(0, 4);
 }
 int sdkDispFillRowRam(int siRow, int siColid, const unsigned char *pasStr, unsigned int ucAtr){
@@ -96,8 +192,8 @@ int sdkDispRow(int siRow, int eCol, const unsigned char * pasStr, unsigned int u
      return SDK_OK;
 }
 
-int sdk_dev_get_key(void){
-
+int sdk_dev_get_key(void)
+{
     return getKey();
 }
 
@@ -129,34 +225,35 @@ s32 sdkSysGetColorValue(SDK_COLOR_ID eColorId)
     return SDK_ERR;
 }
 
-u32 sdkTimerGetId(void)
-{
-    u32 sys_tick;
-
-    if( DDI_OK == ddi_sys_get_tick(&sys_tick) )
-    {
-        return sys_tick;
-    }
-    else
-    {
-        Assert(0);
-        return 0;
-    }
-}
+//u32 sdkTimerGetId(void)
+//{
+//    u32 sys_tick;
+//
+//    if( DDI_OK == ddi_sys_get_tick(&sys_tick) )
+//    {
+//        return sys_tick;
+//    }
+//    else
+//    {
+//        Assert(0);
+//        return 0;
+//    }
+//}
 
 
 void sdkmSleep(const s32 siMs)
 {
-    u32 timeid1, timeid2;
-
-//    ddi_sys_msleep(siMs);
-    timeid1 = sdkTimerGetId();
-    while(1){
-        timeid2 = sdkTimerGetId();
-        if((timeid2 - timeid1) > siMs){
-            break;
-        }
-    }
+//    u32 timeid1, timeid2;
+//
+////    ddi_sys_msleep(siMs);
+//    timeid1 = sdkTimerGetId();
+//    while(1){
+//        timeid2 = sdkTimerGetId();
+//        if((timeid2 - timeid1) > siMs){
+//            break;
+//        }
+//    }
+	usleep(siMs*1000);
 }
 
 void sdkDev_Printf(char *fmt, ...)
@@ -372,33 +469,42 @@ int sdkIccOpenRfDev()
 int sdkIccPowerOnAndSeek()
 {
 	u8 buf[6];
-	int ret;
+	int ret,rslt;
+    u32 timeoutvalue;
 
-	memset(buf, 0, sizeof(buf));
-	ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
-	Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
-	Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
-	if(ret != 0x00)
+    timeoutvalue = 100 * 1000;
+	sdkTimerStar(timeoutvalue);
+
+	while (!sdkTimerIsEnd())
 	{
-		SDK_ERR;
+		memset(buf, 0, sizeof(buf));
+		ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
+		Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
+		Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
+		if(ret != 0x00)
+		{
+			SDK_ERR;
+		}
+
+		if(buf[1] == 0x00)	//No card
+		{
+			rslt = SDK_ICC_NOCARD;
+		}
+		else if(buf[1] == 0x02)	//Multi Card Collision
+		{
+			return SDK_ICC_MUTICARD;
+		}
+		if(buf[1] == 0x03 || buf[1] == 0x04)
+		{
+			return SDK_OK;
+		}
+		else
+		{
+			return SDK_ERR;
+		}
 	}
 
-	if(buf[1] == 0x00)
-	{
-		return SDK_ICC_NOCARD;
-	}
-	else if(buf[1] == 0x02)
-	{
-		return SDK_ICC_MUTICARD;
-	}
-	if(buf[1] == 0x03 || buf[1] == 0x04)
-	{
-		return SDK_OK;
-	}
-	else
-	{
-		return SDK_ERR;
-	}
+	return rslt;
 }
 
 int sdkIccResetIcc()

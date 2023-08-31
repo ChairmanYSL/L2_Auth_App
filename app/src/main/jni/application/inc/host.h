@@ -102,13 +102,16 @@ EXTERN unsigned char gstHostTimeout;
 
 typedef struct
 {
-    unsigned char amountexit;
+    unsigned char amountexist;
     unsigned char amount[6];
-    unsigned char otheramountexit;
+    unsigned char otheramountexist;
     unsigned char otheramount[6];
-    unsigned char typeexit;
+    unsigned char typeexist;
     unsigned char transtype;
-
+	unsigned char currcodeexist;
+	unsigned char currencycode[2];
+	unsigned char currexpexist;
+	unsigned char currexp;
 }BCTC_AUTOTRADE;
 
 EXTERN BCTC_AUTOTRADE gstbctcautotrade;

@@ -513,7 +513,6 @@ s32 ReadCardDisp()
     }
 
     sdkDispBrushScreen();
-
     return SDK_OK;
 }
 
@@ -671,27 +670,18 @@ void IccDispText(u8 const *Text)
 
 s32 IccReadCard()
 {
-    u8 heUID[30] = {0}; //heUID[0]:UID鐨勯暱搴︼紱heUID[1~x]:涓篣ID鐨勬暟鎹?
-    u8 temp[40] = {0};
-    u8 handLen = 0, handData[40] = {0};
-    s32 key=0;
-    u32 timerID;
     s32 rslt;
-    u32 timeoutvalue;
     int i=0;
-
-    sdkDispBrushScreen();
-    timeoutvalue = 10 * 1000;
-	sdkTimerStar(timeoutvalue);
 
 	rslt = sdkIccOpenRfDev();
 	if(rslt != 0)
 	{
+		sdkTestIccDispText("Open RF Dev fail!");
 		return SDK_ERR;
 	}
 
 	rslt = sdkIccPowerOnAndSeek();
-	Trace("read card", "sdkIccResetIcc ret = %d\r\n", rslt);
+	Trace("read card", "sdkIccPowerOnAndSeek ret = %d\r\n", rslt);
 	if(rslt != SDK_OK)
 	{
 		return rslt;
@@ -873,16 +863,16 @@ void ImportTradeAmount()
 	TraceHex("app", "amount in BCD=", Amount,6);
 
 	sdkEMVBaseSetTwoTransAmount(Amount, gbcOtherAmount);
-	if(0 == gstbctcautotrade.amountexit)
+	if(0 == gstbctcautotrade.amountexist)
 	{
 		sdkEMVBaseDelTLV("\x9F\x02");
 	}
-	if(0 == gstbctcautotrade.otheramountexit)
+	if(0 == gstbctcautotrade.otheramountexist)
 	{
 		sdkEMVBaseDelTLV("\x9F\x03");
 	}
-	Trace("app", "typeexit = %d\r\n", gstbctcautotrade.typeexit);
-	if(1 == gstbctcautotrade.typeexit)
+	Trace("app", "typeexit = %d\r\n", gstbctcautotrade.typeexist);
+	if(1 == gstbctcautotrade.typeexist)
 	{
 		sdkEMVBaseConfigTLV("\x9C", &(gstbctcautotrade.transtype), 1);
 	}
@@ -1206,37 +1196,37 @@ _RETRY:
 	sdkPureSetSendUIRequest(BCTCSendUIRequest);
 
 _SECONDTAP:
-	while(1)
+	ReadCardDisp();
+	sdkmSleep(500);
+	ret = IccReadCard();
+	Trace("app","IccReadCard ret= %d\r\n",ret);
+	if(SDK_OK == ret)
 	{
-		ReadCardDisp();
-		ret = IccReadCard();
-		Trace("app","IccReadCard ret= %d\r\n",ret);
-		if(SDK_OK == ret)
-		{
-			break;
-		}
-		else if(SDK_ICC_MUTICARD == ret)
-		{
-			sdkTestIccDispText("Multi Card Collision");
-			sdkIccPowerDown();
-			gCollisionflag = 1;
-			gCollisionCounter++;
-			sdkmSleep(1000);
-		}
-		else if(SDK_ERR == ret)
-		{
-			sdkTestIccDispText("Read Card error,Tx Stop");
-			return ret;
-		}
-		else if(SDK_ICC_NOCARD == ret)
-		{
-			return SDK_OK;
-		}
-		else
-		{
-			return SDK_OK;
-		}
+
 	}
+	else if(SDK_ICC_MUTICARD == ret)
+	{
+		sdkTestIccDispText("Multi Card Collision");
+		sdkIccPowerDown();
+		gCollisionflag = 1;
+		gCollisionCounter++;
+		sdkmSleep(1000);
+		goto _SECONDTAP;
+	}
+	else if(SDK_ERR == ret)
+	{
+		sdkTestIccDispText("Read Card error,Tx Stop");
+		return ret;
+	}
+	else if(SDK_ICC_NOCARD == ret)
+	{
+		return SDK_OK;
+	}
+	else
+	{
+		return SDK_ERR;
+	}
+
 
 	ImportTradeAmount();
 

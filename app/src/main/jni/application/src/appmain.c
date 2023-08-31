@@ -97,11 +97,13 @@ s32 appmain(s32 argc, char const *argv[])
     gstAutoTest = 0;	//2021.9.10 lishiyao  add for BCTC New Host of JCB
 	gstHostTimeout = 0;		//2021.9.10 lishiyao
     memset(&gstbctcautotrade,0,sizeof(gstbctcautotrade));
-    gDispSeePhone=0;//luohuidong 2018.02.02 10:20
+
+
+    gDispSeePhone=0;
 	gJCBPaperNum = 1;
 	gTransCurrExponent = 2;//默认有两位小数
+
 	gSerialPortId = OpenComm();
-//	gSerialPortId = 1;
 	Trace("lishiyao", "return portID:%d\r\n", gSerialPortId);
 
 //	gTCPPort = SimData.TCPPort;
