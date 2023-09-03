@@ -1368,6 +1368,7 @@ _SECONDTAP:
 
 	sdkmSleep(500);
 	sdkIccPowerDown();
+	sdkIccCloseRfDev();
 	memset(gstasAmount, 0, sizeof(gstasAmount));
 	memset(gbcOtherAmount,0,sizeof(gbcOtherAmount));
 	return ret;
