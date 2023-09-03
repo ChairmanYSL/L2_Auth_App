@@ -3395,6 +3395,109 @@ s32 BCTCSingleTrade(void)
 }
 #endif
 
+void BCTCSendDataRecord(void)
+{
+    u8 ComPackSend[256],data[256];
+    u16 ComPackSendLen, ComPackRecvLen;
+    u8 MsgType,firstByte;
+	u8 *tag;
+	s32 dataLen=0,i,tagLen,protolLen,index;
+	u8 tagList[][3] = {
+		{0x9F,0x02,0x00},
+		{0x9F,0x03,0x00},
+		{0x9F,0x26,0x00},
+		{0x82,0x00,0x00},
+		{0x9F,0x36,0x00},
+		{0x9F,0x27,0x00},
+		{0x9F,0x10,0x00},
+		{0x9F,0x1A,0x00},
+		{0x95,0x00,0x00},
+		{0x5F,0x2A,0x00},
+		{0x9A,0x00,0x00},
+		{0x9C,0x00,0x00},
+		{0x9F,0x37,0x00},
+		{0x9F,0x35,0x00},
+		{0x57,0x00,0x00},
+		{0x9F,0x34,0x00},
+		{0x84,0x00,0x00},
+		{0x5F,0x34,0x00},
+		{0x5A,0x00,0x00},
+		{0x9F,0x1F,0x00},
+		{0x5F,0x20,0x00},
+		{0x9F,0x77,0x00},
+	};
+
+    MsgType = BCTC_MNG_TermDispUI_SEND;
+
+	if(HOST_TRANS_SERIAL == gHostTransType)
+	{
+		if(OpenComm() < 0)
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Serial Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+	}
+    else if(HOST_TRANS_WIFI == gHostTransType)
+    {
+		if(!sdkGetWifiEnable())
+		{
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Open Wifi Error", SDK_DISP_DEFAULT);
+			return SDK_ERR;
+		}
+    }
+
+	ComPackSendLen = 0;
+	ComPackSend[ComPackSendLen++] = MsgType;
+	Trace("BCTC", "Msgtype: %02X\r\n", MsgType);
+	Trace("BCTC", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
+	Trace("BCTC", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
+
+	memcpy(ComPackSend+ComPackSendLen, "\xFF\x81\x05", 4);
+	ComPackSendLen += 4;
+	index = ComPackSendLen - 1;
+
+	protolLen = 0;
+	for(i = 0; i < sizeof(tagList)/sizeof(tagList[0]); i++)
+	{
+		memset(data, 0, sizeof(data));
+		firstByte = tagList[i][0];
+		if ((firstByte & 0x1F) == 0x1F)
+		{
+			tagLen = 2;
+		}
+		else
+		{
+			tagLen = 1;
+		}
+
+		tag = (u8 *)sdkGetMem(tagLen);
+		if(tag == NULL)
+		{
+			return;
+		}
+//		memset(tag, 0, tagLen);
+		memcpy(tag, tagList[i], tagLen);
+
+		if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
+		{
+			memcpy(ComPackSend+ComPackSendLen, tag, tagLen);
+			ComPackSendLen += tagLen;
+			protolLen += tagLen;
+			ComPackSend[ComPackSendLen++] = dataLen;
+			protolLen++;
+			memcpy(ComPackSend+ComPackSendLen, data, dataLen);
+			ComPackSendLen += dataLen;
+			protolLen += dataLen;
+		}
+
+		sdkFreeMem(tag);
+	}
+
+	ComPackSend[index] = protolLen;
+
+	BCTCSendData(ComPackSend, ComPackSendLen);
+}
+
 void BCTCSendOutCome(void)
 {
     u8 ComPackSend[128], ComPackRecv[16];
@@ -3462,6 +3565,11 @@ void BCTCSendOutCome(void)
 	ComPackSendLen+=2;
 
 	ret = BCTCSendData(ComPackSend, ComPackSendLen);
+
+	if(flag & 0x20)
+	{
+		BCTCSendDataRecord();
+	}
 //	CloseComm();
 }
 
@@ -3497,20 +3605,16 @@ void BCTCSendUIRequest(int type)
     ComPackSend[ComPackSendLen++] = MsgType;
 	if(PURE_UIREQ_OUTCOME == type)
 	{
-		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x16\x16", 4);
+		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x16\x0E", 4);
 	}
 	else if(PURE_UIREQ_RESTART == type)
 	{
-		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x17\x16", 4);
+		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x17\x0E", 4);
 	}
 	ComPackSendLen += 4;
 	ComPackSend[ComPackSendLen++] =	gstUIRequest.MessageID;
 	ComPackSend[ComPackSendLen++] =	gstUIRequest.Status;
-	memcpy(ComPackSend+ComPackSendLen, "\x00\x00", 2);
-	ComPackSendLen += 2;
 	ComPackSend[ComPackSendLen++] =	gstUIRequest.HoldTime;
-	memcpy(ComPackSend+ComPackSendLen, "\x00\x00\x00\x00\x00\x00", 6);
-	ComPackSendLen += 6;
 	memcpy(ComPackSend+ComPackSendLen, gstUIRequest.LanguagePerference, 2);
 	ComPackSendLen += 2;
 	ComPackSend[ComPackSendLen++] = gstUIRequest.ValueQualifier;

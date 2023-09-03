@@ -483,29 +483,29 @@ int sdkCommCloseUart(int portId)
     return result;
 }
 
-bool sdkTimerIsEnd()
-{
-	int result = 1;
-	jboolean flag;
-    if(DeviceOpera == NULL || mDeviceOpera == NULL) {
-        result = InitDeviceOpera();
-    }
-
-    if (result == 1) {
-        flag = (*jniEnv)->CallBooleanMethod(jniEnv, mDeviceOpera, TimerisEnd);
-    }
-    freeDeviceObject();
-
-	if(flag == JNI_TRUE)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-
-}
+//bool sdkTimerIsEnd()
+//{
+//	int result = 1;
+//	jboolean flag;
+//    if(DeviceOpera == NULL || mDeviceOpera == NULL) {
+//        result = InitDeviceOpera();
+//    }
+//
+//    if (result == 1) {
+//        flag = (*jniEnv)->CallBooleanMethod(jniEnv, mDeviceOpera, TimerisEnd);
+//    }
+//    freeDeviceObject();
+//
+//	if(flag == JNI_TRUE)
+//	{
+//		return true;
+//	}
+//	else
+//	{
+//		return false;
+//	}
+//
+//}
 
 void sdkTimerStar(unsigned int uiMs)
 {

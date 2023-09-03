@@ -21,4 +21,7 @@
 #define SDK_PURE_STATUS_PUTDATA_AFTERGAC        0x13
 #define SDK_PURE_STATUS_KERNEL_DEACTIVATE       0x14
 
+extern int sdkPureSetSendOutcome(void (*fun_pointer)());
+extern int sdkPureSetSendUIRequest(void (*fun_pointer)(int type));
+
 #endif

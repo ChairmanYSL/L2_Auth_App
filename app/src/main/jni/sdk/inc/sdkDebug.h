@@ -12,8 +12,8 @@ extern "C" {
 
 #include "sdktypedef.h"
 
-extern s32 sdkDebugTraceHex(u8 const* pasTag, u8 const* pasInfo, void const *pheDate, s32 siLen,u8 const *pasfun,s32 line);
-extern void SdkDebugTrace(u8 const *pasTag, u8 const*  pasFile, u8 const *pFun, int siLine,  char const *pheFmt, ...);
+s32 sdkDebugTraceHex(u8 const* pasTag, u8 const* pasInfo, void const *pheDate, s32 siLen,u8 const *pasfun,s32 line);
+void SdkDebugTrace(u8 const *pasTag, u8 const*  pasFile, u8 const *pFun, int siLine,  char const *pheFmt, ...);
 
 
 #ifdef ZT_SDK_DEBUG

@@ -1,6 +1,7 @@
 #ifndef _DLLEMVBASETAGBASELIB_H_
 #define _DLLEMVBASETAGBASELIB_H_
 
+#define EMVTAG_SZZTICS								 "\x1F\x01\x00"
 #define EMVTAG_PUREStatusCheckSupportFlag			 "\x1F\x02\x00"
 #define EMVTAG_IndustryIDNo                          "\x42\x00\x00"
 #define EMVTAG_CardAID                               "\x4F\x00\x00"
@@ -257,8 +258,11 @@
 #define EMVTAG_PUREDF08			                     "\xDF\x08\x00"
 #define EMVTAG_PUREDF09			                     "\xDF\x09\x00"
 #define EMVTAG_PUREDF0A			                     "\xDF\x0A\x00"
+#define EMVTAG_PURECOTC							 	 "\xDF\x13\x00"	//CONSECUTIVE_OFFLINE_TRANS_COUNTER,only for Algeria customer
 #define EMVTAG_RupayServiceManageInfo			     "\xDF\x15\x00"
 #define EMVTAG_RupayServiceID			     		 "\xDF\x16\x00"
+#define EMVTAG_PURELCOL								 "\xDF\x1B\x00"
+#define EMVTAG_PUREUCOL								 "\xDF\x1C\x00"
 #define EMVTAG_RupayServiceSummary			     	 "\xDF\x22\x00"
 #define EMVTAG_PUREZeroAmountAllowedFlag			 "\xDF\x22\x00"
 #define EMVTAG_RupayServiceSignature			     "\xDF\x23\x00"
@@ -273,6 +277,8 @@
 #define EMVTAG_DPASDataStorageDirectory			     "\xDF\x3D\x00" // D-PAS
 #define EMVTAG_CardID			                     "\xDF\x3E\x00" // D-PAS
 #define EMVTAG_MIRTransRecoveryCounter         		 "\xDF\x41\x00"
+#define EMVTAG_PUREAppVerUL							 "\xDF\x42\x00" //Algeria Special Request,Terminal App Version Upper Limit
+#define EMVTAG_PUREAppVerLL							 "\xDF\x43\x00" //Algeria Special Request,Terminal App Version Lower Limit
 #define EMVTAG_RupayServiceTermData         		 "\xDF\x45\x00"
 #define EMVTAG_DPASCDCVMStatus         		         "\xDF\x45\x00" // D-PAS_CT
 #define EMVTAG_RupayPRMicc        		 			 "\xDF\x49\x00"

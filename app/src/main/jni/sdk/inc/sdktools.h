@@ -39,7 +39,7 @@ extern s32 sdkSetRtc(const u8 *pbcSrc);
 
 
 //石玮松 2012.08.09 15:35  定时器请使用下面两个函数//functions about timer
-extern bool sdkTimerIsEnd();
+//extern bool sdkTimerIsEnd();
 extern void sdkTimerStar(unsigned int uiMs);
 extern const u8* sdkTimerGetAsc(void);
 

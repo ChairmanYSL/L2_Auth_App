@@ -1591,7 +1591,7 @@ s32 DetecteOther()
 #else
 	s32 key = 0;
 	u32 count;
-	for(count = 0; count < 500; count++)
+	for(count = 0; count < 400; count++)
 	{
 		sdkmSleep(1);
 		key = sdkKbGetKey();

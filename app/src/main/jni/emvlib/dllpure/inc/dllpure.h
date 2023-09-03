@@ -15,6 +15,9 @@
 #define PURE_REQ_INPUTPIN			60
 #define PURE_REQ_CHECKREVOKEY		61
 #define PURE_REQ_LOADAIDPARAM		62
+#define PURE_ERR_NO9C				63
+#define PURE_REQ_SECONDTAP			64
+#define PURE_REQ_FORCEONLINE		65
 
 #define PURE_CVMMETHOD_DEFAULT  				0x3F
 #define PURE_CVMMETHOD_NOCVMPERFORMED 			0x1F
@@ -73,7 +76,6 @@ typedef struct
 
 	unsigned char PureImplementationOption;//1111 1000 EMV/Legacy Mode 1.Offline Data Authentication 2.Exception File Check 3.Issuer Update
 	unsigned char PureCandidateListEmptyFlag; //for jcb contactless terminal spec V1.3
-	unsigned char secondtap;
 	unsigned char PureCVMParameter;
 	unsigned char CCIDExistInGPO;
 	unsigned char PreprcessIndicator;
@@ -94,6 +96,7 @@ typedef struct
 	unsigned char FCIIn1stSelectLen;
 	unsigned char FCIDifferFlag;		//1-: 1st select FCI and 2nd select FCI content different
 	unsigned char FCIParseErrorFlag;	//0-:FCI template present and parse correct;1-:FCI parse error;2-:FCI dont be obtained
+	unsigned char SecondTap;
 }PURETRADEPARAMETER;;
 
 
@@ -112,7 +115,8 @@ typedef int (*PURE_GetVerifyCardNoRes)(void);
 typedef int(*PURE_GetVerifyRevocationKeyRes)(void);
 typedef unsigned char(*PURE_CheckCAPKExist)(PURETRADEPARAMETER *EMVTradeParam);
 typedef int(*PURE_GetTransAmtSumRes)(void);
-typedef unsigned char(*PURE_Preprocess)(PURETRADEPARAMETER *EMVTradeParam);
+typedef int(*PURE_Preprocess)(PURETRADEPARAMETER *EMVTradeParam);
+typedef int(*PURE_CheckRestrictAID)(unsigned char *AID, int len);
 
 typedef struct{
 
@@ -134,6 +138,7 @@ typedef struct{
 	PURE_CheckCAPKExist CheckCapkExist;
 	PURE_GetTransAmtSumRes GetTransAmtSumRes;
 	PURE_Preprocess Preprocess;
+	PURE_CheckRestrictAID CheckRestrictAID;
 }PURETradeUnionStruct;
 
 typedef struct

@@ -19,12 +19,38 @@
 #include "ddi_manage.h"
 #include <signal.h>
 #include <time.h>
+#include "extern.h"
 
 #define  LOG_TAG    "PUREEMVCORE"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
+extern bool sdkIsBcdNum(u8 const *pheSrc, s32 siSrclen);
+bool sdkTimerIsEnd(long uiId, u32 uiMs);
+long sdkTimerGetId();
+
+
+
+int sdkGetRtc(unsigned char *pbcDest)
+{
+    if(NULL == pbcDest)
+    {
+        return SDK_PARA_ERR;
+    }
+    ddi_sys_get_time(pbcDest);
+
+    if(sdkIsBcdNum(pbcDest, 6))
+    {
+        return SDK_OK;
+    }
+    else
+    {
+        return SDK_PARA_ERR;
+    }
+}
+
 static volatile int timer_expired = 0;
 static timer_t timerID;
+u8 config_dir[64] = {0};
 
 
 void timer_handler(int signum)
@@ -70,20 +96,20 @@ int set_timer(int milliseconds)
 }
 #endif
 
-u32 sdkTimerGetId(void)
-{
-    u32 sys_tick;
-
-    if( DDI_OK == ddi_sys_get_tick(&sys_tick) )
-    {
-        return sys_tick;
-    }
-    else
-    {
-        Assert(0);
-        return 0;
-    }
-}
+//u32 sdkTimerGetId(void)
+//{
+//    u32 sys_tick;
+//
+//    if( DDI_OK == ddi_sys_get_tick(&sys_tick) )
+//    {
+//        return sys_tick;
+//    }
+//    else
+//    {
+//        Assert(0);
+//        return 0;
+//    }
+//}
 
 
 // 查询定时器是否过时
@@ -429,12 +455,26 @@ void SendTCPTest(void)
 
 void HostOutcomeTest(void)
 {
+
+	sdkEMVBaseTransInit();
+	sdkEMVBaseConfigTLV("\x9F\x02", "\x00\x0\x00\x00\x00\x01", 6);
+	sdkEMVBaseConfigTLV("\x9F\x03", "\x00\x0\x00\x00\x00\x00", 6);
+
+
+
+
+
+	sdkCleanOutcomeParam();
 	sdkSetOutcomeParam(SDK_OUTCOME_RESULT_TRYAGAIN, SDK_OUTCOME_START_B, SDK_OUTCOME_CVM_NA, 1, 1, 0, 0, SDK_OUTCOME_AIP_NA, 0, 0x13, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	BCTCSendOutCome();
 	sdkmSleep(5000);
+
+	sdkCleanUIRequestParam();
 	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_PROCESSINGERR, 0x13, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
 	sdkmSleep(5000);
+
+	sdkCleanUIRequestParam();
 	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	BCTCSendUIRequest(PURE_UIREQ_RESTART);
 }
@@ -458,6 +498,19 @@ int sdkGetRandom(unsigned char *pheRdm, int siNum)
     return SDK_OK;
 }
 
+unsigned short sdkReadPosSn(unsigned char *pasDest)
+{
+	u16 outlen=64;
+    if(pasDest == NULL)
+    {
+        return SDK_PARA_ERR;
+    }
+
+	ddi_manage_get_sn(pasDest, &outlen);
+    return outlen;
+}
+
+
 
 #define SLOT_RF_CARD 0x04
 
@@ -471,11 +524,12 @@ int sdkIccPowerOnAndSeek()
 	u8 buf[6];
 	int ret,rslt;
     u32 timeoutvalue;
+	long timerid;
 
     timeoutvalue = 100 * 1000;
-	sdkTimerStar(timeoutvalue);
+	timerid = sdkTimerGetId();
 
-	while (!sdkTimerIsEnd())
+	while (!sdkTimerIsEnd(timerid, timeoutvalue))
 	{
 		memset(buf, 0, sizeof(buf));
 		ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
@@ -649,3 +703,249 @@ void ReadSNTest(void)
 	Trace("test", "SN Len = %d\r\n", outlen);
 //	TraceHex("test", "SN", pasDest, outlen);
 }
+
+int sdkSysSetCurAppDir(unsigned char *pasDir, int len)
+{
+	if(NULL == pasDir)
+	{
+		return SDK_PARA_ERR;
+	}
+	Trace("extern", "pasDir: %s\r\n", pasDir);
+	Trace("extern", "input len: %d\r\n", len);
+	memset(config_dir, 0, sizeof(config_dir));
+	memcpy(config_dir, pasDir, len);
+	return SDK_OK;
+}
+
+int sdkSysGetCurAppDir(unsigned char *pasData)
+{
+    if(NULL == pasData) //shijianglong 2013.01.30 15:58
+    {
+        return SDK_PARA_ERR;
+    }
+    strcpy(pasData, "/sdcard/pure/");
+    return SDK_OK;
+}
+
+long sdkTimerGetId()
+{
+	return get_cur_msec();
+}
+
+bool sdkTimerIsEnd(long uiId, u32 uiMs)
+{
+    long lCurid = 0;
+
+    lCurid = get_cur_msec();
+
+    if(lCurid < uiId) // ���ʱ�䳯ǰУ���� �Ǿͳ�ʱ shiweisong 2013.09.09 16:18
+    {
+        return true;
+    }
+
+    if(lCurid - uiId < uiMs)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+
+}
+
+
+
+s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, u16 *psiOutLen)
+{
+    s32 ret = 0,rslt = 0;
+	u32 size = 512;
+	static long timerid = 0;
+	long timerid2 = 0;
+
+    if((NULL == pheInBuf) || (NULL == pheOutBuf) || (NULL == psiOutLen) || siInLen < 0)
+    {
+        return SDK_PARA_ERR;
+    }
+
+	if((0 == memcmp(pheInBuf,"\x00\xA4\x04\x00\x0E\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31\x00",( ( (u16)(siInLen) ) > 18 ? 18 : ( (u16)(siInLen) ) ) ) ) )
+    {
+        timerid = sdkTimerGetId();
+    }
+
+	TraceHex("apdu", "pheInBuf:", pheInBuf, siInLen);
+
+	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, psiOutLen);
+	timerid2 = sdkTimerGetId();
+
+	if(timerid != 0 && (timerid + 1000 < timerid2))
+	{
+		rslt = DetecteOther();
+		Trace("lishiyao", "DetecteOther ret = %d\r\n", rslt);
+		Trace("lishiyao", "ddi_rf_exchange_apdu ret = %d\r\n", ret);
+		if(rslt == SDK_EQU)
+		{
+			*psiOutLen = -1;
+			return SDK_ERR;
+		}
+	}
+
+	Trace("extern", "ddi_icc_trans_apdu ret = %d\r\n", ret);
+
+    if(ret == DDI_OK)
+    {
+		Trace("apdu", "psiOutLen = %d\r\n", *psiOutLen);
+    	TraceHex("emv", "contactless r-apdu:", pheOutBuf, *psiOutLen);
+        return SDK_OK;
+    }
+
+    return SDK_ERR;
+}
+
+
+#define DDI_OK 0
+
+#define SDK_MAX_PATH                40
+
+s32 sdkInsertFile(const u8 *pasFile, const u8 *pheSrc, s32 siStart, s32 siSrclen)
+{
+	s32 i,ret;
+	FILE *fp;
+
+    if (NULL == pasFile || NULL == pheSrc || siStart < 0 || siSrclen < 0) {
+		Trace("ddi", "Input Param invalid\r\n");
+		return SDK_PARA_ERR;
+    }
+
+    if (siStart != 0)
+	{
+        i = sdkGetFileSize(pasFile);
+        if (siStart > i && i > 0)
+        {
+            return SDK_PARA_ERR;
+   		}
+    }
+//	Trace("ddi", "want open file:%s", pasFile);
+	fp = fopen(pasFile, "rb+");
+	if((NULL == fp) && (sdkGetFileSize(pasFile) <= 0))//file doesn't exist
+	{
+		fp = fopen(pasFile, "wb+");
+		if(fp == NULL)
+		{
+			Trace("ddi", "open file error\r\n");
+			return SDK_ERR;
+		}
+		else
+		{
+			fclose(fp);
+			fp = fopen(pasFile, "rb+");
+		}
+	}
+	fseek(fp, 0, SEEK_END);
+	i = ftell(fp);
+	if (siStart > i)
+	{
+		fclose(fp);
+		return SDK_PARA_ERR;
+	}
+	fseek(fp, siStart, SEEK_SET);
+
+	ret = fwrite(pheSrc, sizeof(u8), siSrclen, fp);
+	if(ret == siSrclen)
+	{
+		fclose(fp);
+		return SDK_OK;
+	}
+	else
+	{
+		fclose(fp);
+		return SDK_ERR;
+	}
+}
+
+s32 sdkReadFile(const u8 *pasFile, u8 *pheDest, s32 siOffset, s32 *psiDestlen)
+{
+//	s32 fp=0;
+	FILE *fp = NULL;
+	u32 i;
+
+    if (NULL == pasFile || NULL == pheDest || NULL == psiDestlen || siOffset < 0)
+	{
+        return SDK_PARA_ERR;
+    }
+
+	fp = fopen(pasFile, "rb");
+	if(fp == NULL)
+	{
+		return SDK_FUN_NULL;																						//�ļ���ʧ��
+	}
+
+    if( 0 != fseek(fp, siOffset, SEEK_SET) )
+    {
+        fclose(fp);
+        return SDK_ERR;
+    }
+
+	i = *psiDestlen;
+	*psiDestlen = fread(pheDest, sizeof(u8), i, fp);
+	if(*psiDestlen != i)
+	{
+		fclose(fp);
+		return SDK_ERR;
+	}
+	else
+	{
+		fclose(fp);
+		return SDK_OK;
+	}
+}
+
+s32 sdkGetFileSize(const u8 *pasFile)
+{
+	s32 fileSize;
+//	s32 fp;
+	FILE *fp=NULL;
+
+	if (NULL == pasFile)
+	{
+		return SDK_PARA_ERR;
+	}
+
+	fp = fopen(pasFile, "rb");
+	if(NULL == fp)
+	{
+		return SDK_FUN_NULL;																						//�ļ���ʧ��
+	}
+
+	fseek(fp, 0, SEEK_END);
+
+	fileSize = ftell(fp);
+
+	fclose(fp);
+
+	return fileSize;
+}
+
+s32 sdkDelFile(const u8 *pasFile)
+{
+	s32 ret;
+
+	if(pasFile == NULL)
+	{
+		return SDK_PARA_ERR;
+	}
+
+	ret = remove(pasFile);
+	if(ret == 0)
+	{
+		return SDK_OK;
+	}
+	else
+	{
+		return SDK_ERR;
+	}
+}
+
+
+#define DEBUG_FOR_KERNEL
+//#undef DEBUG_FOR_KERNEL

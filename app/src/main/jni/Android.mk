@@ -15,10 +15,10 @@
 LOCAL_PATH := $(call my-dir)
 
 ##pure
-include $(CLEAR_VARS)
-LOCAL_MODULE := szzt_purejni
-LOCAL_SRC_FILES := sdk/externlib/libszzt_sdkpure.so
-include $(PREBUILT_SHARED_LIBRARY)
+# include $(CLEAR_VARS)
+# LOCAL_MODULE := szzt_purejni
+# LOCAL_SRC_FILES := sdk/externlib/libszzt_sdkpure.so
+# include $(PREBUILT_SHARED_LIBRARY)
 
 #ddi
 include $(CLEAR_VARS)
@@ -67,15 +67,15 @@ MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/sdk/libsdk*/*/*/*.c)
 MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/sdk/libsdk*/*/*/*/*.c)
 
 ### emv
-#MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*.c)
-#MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*/*.c)
-#MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*/*/*.c)
-#MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*/*/*/*.c)
+MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*.c)
+MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*/*.c)
+MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*/*/*.c)
+MY_CPP_LIST += $(wildcard $(LOCAL_PATH)/emvlib/*/*/*/*.c)
 
 
 LOCAL_SRC_FILES := $(MY_CPP_LIST:$(LOCAL_PATH)/%=%)
 
-LOCAL_SHARED_LIBRARIES += szzt_purejni
+# LOCAL_SHARED_LIBRARIES += szzt_purejni
 LOCAL_SHARED_LIBRARIES += trendit_ddi
 
 # LOCAL_STATIC_LIBRARIES += android_support

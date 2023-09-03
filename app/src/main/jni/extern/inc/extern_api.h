@@ -8,6 +8,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 extern int sdkSysSetCurAppDir(unsigned char *pasDir, int len);
+extern int sdkGetRandom(unsigned char *pheRdm, int siNum);
 extern unsigned short sdkReadPosSn(unsigned char *pasDest);
 
 #ifdef __cplusplus
