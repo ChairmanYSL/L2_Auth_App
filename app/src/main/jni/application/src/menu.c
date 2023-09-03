@@ -139,6 +139,15 @@ int Menu0()
 					memset(gbcOtherAmount, 0, 6);
 				}
 
+				if(gstbctcautotrade.currexpexist)
+				{
+					gTransCurrExponent = gstbctcautotrade.currexp;
+				}
+				else
+				{
+					gTransCurrExponent = 2;
+				}
+
 				DealTrade();
                 goto _RETURN;
 

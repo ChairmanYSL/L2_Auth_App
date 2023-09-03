@@ -526,18 +526,19 @@ int sdkIccPowerOnAndSeek()
     u32 timeoutvalue;
 	long timerid;
 
-    timeoutvalue = 100 * 1000;
+    timeoutvalue = 5 * 1000;
 	timerid = sdkTimerGetId();
+//	Trace("ddi", "sdkTimerGetId ret: %d\r\n", timerid);
 
 	while (!sdkTimerIsEnd(timerid, timeoutvalue))
 	{
 		memset(buf, 0, sizeof(buf));
 		ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
 		Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
-		Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
+//		Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
 		if(ret != 0x00)
 		{
-			SDK_ERR;
+			return SDK_ERR;
 		}
 
 		if(buf[1] == 0x00)	//No card
@@ -554,7 +555,7 @@ int sdkIccPowerOnAndSeek()
 		}
 		else
 		{
-			return SDK_ERR;
+			rslt = SDK_ERR;
 		}
 	}
 
@@ -737,9 +738,12 @@ bool sdkTimerIsEnd(long uiId, u32 uiMs)
     long lCurid = 0;
 
     lCurid = get_cur_msec();
-
+//	Trace("ddi", "sdkTimerGetId ret: %d\r\n", lCurid);
+//	Trace("ddi", "sdkTimerGetId input uiId: %d\r\n", uiId);
+//	Trace("ddi", "diff : %d\r\n", lCurid - uiId);
     if(lCurid < uiId) // ���ʱ�䳯ǰУ���� �Ǿͳ�ʱ shiweisong 2013.09.09 16:18
     {
+//		Trace("ddi", "true flag1\r\n");
         return true;
     }
 
@@ -749,6 +753,7 @@ bool sdkTimerIsEnd(long uiId, u32 uiMs)
     }
     else
     {
+//		Trace("ddi", "true flag2\r\n");
         return true;
     }
 

@@ -1167,7 +1167,7 @@ s32 DealTrade(void)
 {
 	s32 ret = SDK_OK;
 	u8 rspcode[2];
-	_SimData SimData;
+//	_SimData SimData;
 	SDK_EMVBASE_CL_HIGHESTAID tempaid = {0};
 	u8 FlowContinueFlag = 1;
 	u8 AmountBCD[6], Passwd[64];
@@ -1178,9 +1178,9 @@ s32 DealTrade(void)
 	gCollisionCounter = 0;
 	gDispSecondTap = 0;
 
-	memset(&SimData, 0, sizeof(_SimData));
-	ReadSimData(&SimData);
-	gTransCurrExponent = SimData.TransCurrencyExponent;
+//	memset(&SimData, 0, sizeof(_SimData));
+//	ReadSimData(&SimData);
+//	gTransCurrExponent = SimData.TransCurrencyExponent;
 	Trace("Trade", "SimData.TransCurrencyExponent = %d\r\n");
 _RETRY:
 

@@ -57,7 +57,7 @@ s32 sdkSetOutcomeParam(u8 Result, u8 Start, u8 CVM, u8 UIRequestonOutcomePresent
 	gstOutcome.UIRequestonOutcomePresent = UIRequestonOutcomePresent;
 	gstOutcome.UIRequestonRestartPresent = UIRequestonRestartPresent;
 	gstOutcome.DataRecordPresent = DataRecordPresent;
-	gstOutcome.DiscretionaryDataPresent = DiscretionaryDataPresent;
+	gstOutcome.DiscretionaryDataPresent = 0;
 	gstOutcome.AlternateInterfacePreference = AlternateInterfacePreference;
 	gstOutcome.Receipt = Receipt;
 	gstOutcome.FieldOffRequest = FieldOffRequest;
