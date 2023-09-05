@@ -24,8 +24,10 @@ public class DeviceOpera {
     public WifiController wifiController;
     public UDPManager udpManager;
     public TCPClient tcpClient;
+    public TCPClientNIO tcpClientNIO;
 
-//    private HwSecurityManager hwSecurityManager;
+
+    //    private HwSecurityManager hwSecurityManager;
     public DeviceOpera(){
         mainApplication = XGDApp.getInstance().getMainApplication();
         mCard=mainApplication.getContactlessCardReader();
@@ -35,6 +37,9 @@ public class DeviceOpera {
         udpManager = new UDPManager();
         tcpClient = new TCPClient();
 //        hwSecurityManager=mainApplication.getHwSecurityManager();
+//        tcpClientNIO = new TCPClientNIO();
+//        tcpClientNIO.setOnMessageReceivedListener((TCPClientNIO.OnMessageReceivedListener) this);
+
     }
 
     public int testCallJava(int i) {
@@ -327,11 +332,34 @@ public class DeviceOpera {
         tcpClient.send(data);
     }
 
-    public byte[] readTCP(int[] res) throws IOException {
-        return tcpClient.read(res);
+    public byte[] readTCP(int[] res){
+        try{
+            return tcpClient.read(res);
+        }catch (IOException e){
+            Log.e("kdkdkjd","readTCP:"+e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public void closeTCP() throws IOException {
         tcpClient.close();
+    }
+
+    public void openTCPNIO(String IP, int port) throws IOException {
+        tcpClientNIO.connect(IP, port);
+        tcpClientNIO.loop();
+    }
+
+    public void sendTCPNIO(byte[] data) throws IOException {
+        tcpClientNIO.send(data);
+    }
+
+    public void onMessageReceived(byte[] data) {
+        // 处理数据...
+    }
+
+    public void closeTCPNIO() throws IOException {
+        tcpClientNIO.close();
     }
 }

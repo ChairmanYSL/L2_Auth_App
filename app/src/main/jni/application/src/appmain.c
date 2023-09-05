@@ -76,6 +76,7 @@ s32 appmain(s32 argc, char const *argv[])
     int ret;
 	s32 timeout = 0;
 	_SimData SimData = {0};
+	u8 trendit_dir[]="/sdcard/pure/";
 //	u8 *data_uf, *data_f;
 
     sdkDispClearScreen();
@@ -116,6 +117,7 @@ s32 appmain(s32 argc, char const *argv[])
 //	Trace("lishiyao", "before removeLeadingZeros IP:%s\r\n", data_f);
 //	removeLeadingZeros(data_f);
 //	sdkOpenWifi(data_f, gTCPPort);
+	sdkSysSetCurAppDir(trendit_dir, strlen(trendit_dir));
 
     AppSysmain();
 

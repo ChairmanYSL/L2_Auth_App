@@ -687,7 +687,7 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
     }
 
 	TraceHex("Download AID", "Base AID Name", tempAid->Aid, tempAid->AidLen);
-	TraceHex("Download AID", "Extern AID Name", tempAid->Aid, tempAid->AidLen);
+	TraceHex("Download AID", "Extern AID Name", extempAid->Aid, extempAid->AidLen);
 
 	pbTlv = TlvSeek(buf, ilen, 0xDF01); 	//Asi
 
@@ -750,7 +750,7 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
 		else
 		{
 			pb = TlvVPtr(pbTlv);
-        	memcpy( &(tempAid->transvaule), pb, TlvLen(pbTlv));
+        	memcpy(&(tempAid->transvaule), pb, TlvLen(pbTlv));
 			memcpy(&(extempAid->TransType), pb, TlvLen(pbTlv));
 		}
     }
@@ -836,87 +836,88 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
         pb = TlvVPtr(pbTlv);
         memcpy(tempAid->AppVerNum, pb, 2);
     }
-    pbTlv = TlvSeek(buf, ilen, 0x9F15);    //Merchant Category Code
 
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        memcpy(extempAid->MerchCateCode, pb, 2);
-    }
-    pbTlv = TlvSeek(buf, ilen, 0x9F16);
+//    pbTlv = TlvSeek(buf, ilen, 0x9F15);    //Merchant Category Code
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        memcpy(extempAid->MerchCateCode, pb, 2);
+//    }
+//    pbTlv = TlvSeek(buf, ilen, 0x9F16);
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        memcpy(extempAid->MerchID, pb, 15);
+//    }
+//    pbTlv = TlvSeek(buf, ilen, 0x9F4E);    //Merchant Name and Location
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        extempAid->MerchantNameLen = TlvLen(pbTlv);
+//        memcpy(extempAid->MerchantName, pb, extempAid->MerchantNameLen);
+//    }
+//    pbTlv = TlvSeek(buf, ilen, 0x9F1C);    //Terminal Identification
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        memcpy(extempAid->TermID, pb, TlvLen(pbTlv));
+//    }
+//
+//    pbTlv = TlvSeek(buf, ilen, 0x5F36);    //Transaction Currency Exponent
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        extempAid->TransCurcyExp = *pb;
+//    }
+//    pbTlv = TlvSeek(buf, ilen, 0x9F3C);    //Transaction Reference Currency Cod
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        memcpy(extempAid->TransReferCurcyCode, pb, 2);
+//    }
+//    pbTlv = TlvSeek(buf, ilen, 0x9F3D);    //Transaction Reference Currency Exponent (n1)
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        extempAid->TransReferCurcyExp = *pb;
+//    }
+//    pbTlv = TlvSeek(buf, ilen, 0x5F2A);    //Transaction Currency Code
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        memcpy(extempAid->TransCurcyCode, pb, 2);
+//    }
 
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        memcpy(extempAid->MerchID, pb, 15);
-    }
-    pbTlv = TlvSeek(buf, ilen, 0x9F4E);    //Merchant Name and Location
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        extempAid->MerchantNameLen = TlvLen(pbTlv);
-        memcpy(extempAid->MerchantName, pb, extempAid->MerchantNameLen);
-    }
-    pbTlv = TlvSeek(buf, ilen, 0x9F1C);    //Terminal Identification
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        memcpy(extempAid->TermID, pb, TlvLen(pbTlv));
-    }
-
-    pbTlv = TlvSeek(buf, ilen, 0x5F36);    //Transaction Currency Exponent
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        extempAid->TransCurcyExp = *pb;
-    }
-    pbTlv = TlvSeek(buf, ilen, 0x9F3C);    //Transaction Reference Currency Cod
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        memcpy(extempAid->TransReferCurcyCode, pb, 2);
-    }
-    pbTlv = TlvSeek(buf, ilen, 0x9F3D);    //Transaction Reference Currency Exponent (n1)
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        extempAid->TransReferCurcyExp = *pb;
-    }
-    pbTlv = TlvSeek(buf, ilen, 0x5F2A);    //Transaction Currency Code
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        memcpy(extempAid->TransCurcyCode, pb, 2);
-    }
-
-    pbTlv = TlvSeek(buf, ilen, 0x9F01);
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-		if(TlvLen(pbTlv) < 6)
-            memcpy(&extempAid->AcquireID[6 - TlvLen(pbTlv)], pb, TlvLen(pbTlv));
-		else
-		    memcpy(extempAid->AcquireID, pb, TlvLen(pbTlv));
-    }
+//    pbTlv = TlvSeek(buf, ilen, 0x9F01);
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//		if(TlvLen(pbTlv) < 6)
+//            memcpy(&extempAid->AcquireID[6 - TlvLen(pbTlv)], pb, TlvLen(pbTlv));
+//		else
+//		    memcpy(extempAid->AcquireID, pb, TlvLen(pbTlv));
+//    }
 
     tempAid->TermPinCap = 1;
 
-    pbTlv = TlvSeek(buf, ilen, 0xDF8102);
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        extempAid->TermTDOLLen = TlvLen(pbTlv);
-        memcpy(extempAid->TermTDOL, pb, extempAid->TermTDOLLen);
-    }
-    TraceHex("Download AID Param", "TermTDOL", extempAid->TermTDOL, extempAid->TermTDOLLen);
+//    pbTlv = TlvSeek(buf, ilen, 0xDF8102);
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        extempAid->TermTDOLLen = TlvLen(pbTlv);
+//        memcpy(extempAid->TermTDOL, pb, extempAid->TermTDOLLen);
+//    }
+//    TraceHex("Download AID Param", "TermTDOL", extempAid->TermTDOL, extempAid->TermTDOLLen);
 
     pbTlv = TlvSeek(buf, ilen, 0xDF19);
 
@@ -1042,41 +1043,41 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
     }
 	TraceHex("Download AID", "Mandatory Tag Object List (MTOL)", extempAid->MTOL, TlvLen(pbTlv));
 
-	pbTlv = TlvSeek(buf, ilen, 0xDF45);	//Authentication Transaction Data Tag Object List (ATDTOL)
+//	pbTlv = TlvSeek(buf, ilen, 0xDF45);	//Authentication Transaction Data Tag Object List (ATDTOL)
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//        memcpy(extempAid->ATDTOL, pb, TlvLen(pbTlv));
+//		extempAid->ATOLLen = TlvLen(pbTlv);
+//    }
+//	TraceHex("Download AID", "Authentication Transaction Data Tag Object List (ATDTOL)", extempAid->ATDTOL, TlvLen(pbTlv));
 
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-        memcpy(extempAid->ATDTOL, pb, TlvLen(pbTlv));
-		extempAid->ATOLLen = TlvLen(pbTlv);
-    }
-	TraceHex("Download AID", "Authentication Transaction Data Tag Object List (ATDTOL)", extempAid->ATDTOL, TlvLen(pbTlv));
+//	pbTlv = TlvSeek(buf, ilen, 0x9F76);	//Authentication Transaction Data Tag Object List (ATDTOL)
+//
+//    if(pbTlv != NULL)
+//    {
+//        pb = TlvVPtr(pbTlv);
+//		extempAid->TransDataLen = TlvLen(pbTlv);
+//		if(extempAid->TransDataLen > 256)
+//		{
+//			extempAid->TransDataLen = 256;
+//		}
+//        memcpy(extempAid->TransData, pb, extempAid->TransDataLen);
+//		TraceHex("Download AID", "Terminal Transaction Data(9F76)", extempAid->TransData, extempAid->TransDataLen);
+//    }
 
-	pbTlv = TlvSeek(buf, ilen, 0x9F76);	//Authentication Transaction Data Tag Object List (ATDTOL)
-
-    if(pbTlv != NULL)
-    {
-        pb = TlvVPtr(pbTlv);
-		extempAid->TransDataLen = TlvLen(pbTlv);
-		if(extempAid->TransDataLen > 256)
-		{
-			extempAid->TransDataLen = 256;
-		}
-        memcpy(extempAid->TransData, pb, extempAid->TransDataLen);
-		TraceHex("Download AID", "Terminal Transaction Data(9F76)", extempAid->TransData, extempAid->TransDataLen);
-    }
-
-	ReadSimData(&SimData);
-	pbTlv = TlvSeek(buf, ilen, 0xDF7F);	//Authentication Transaction Data Tag Object List (ATDTOL)
-	if(NULL != pbTlv)
-	{
-		SimData.RestrictAIDLen = TlvLen(pbTlv);
-		Trace("Download AID", "Restrict AID Len = %d\r\n", SimData.RestrictAIDLen);
-		pb = TlvVPtr(pbTlv);
-		memcpy(SimData.RestrictAID, pb, SimData.RestrictAIDLen);
-		TraceHex("Download AID", "Restrict AID(DF7F)", SimData.RestrictAID, SimData.RestrictAIDLen);
-	}
-	SaveSimData(&SimData);
+//	ReadSimData(&SimData);
+//	pbTlv = TlvSeek(buf, ilen, 0xDF7F);	//Authentication Transaction Data Tag Object List (ATDTOL)
+//	if(NULL != pbTlv)
+//	{
+//		SimData.RestrictAIDLen = TlvLen(pbTlv);
+//		Trace("Download AID", "Restrict AID Len = %d\r\n", SimData.RestrictAIDLen);
+//		pb = TlvVPtr(pbTlv);
+//		memcpy(SimData.RestrictAID, pb, SimData.RestrictAIDLen);
+//		TraceHex("Download AID", "Restrict AID(DF7F)", SimData.RestrictAID, SimData.RestrictAIDLen);
+//	}
+//	SaveSimData(&SimData);
 
     ret = sdkEMVBaseAddAnyAIDList(tempAid, 1);
 	Trace("BCTC", "sdkEMVBaseAddAnyAIDList ret = %d\r\n", ret);
@@ -1090,6 +1091,7 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
         sdkDispFillRowRam(SDK_DISP_LINE2, 0, DISP, SDK_DISP_DEFAULT);
         sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Download OK.", SDK_DISP_DEFAULT);
         sdkDispBrushScreen();
+		TraceHex("Test", "Donload extempAid", (unsigned char *)extempAid, sizeof(APPEX_AID_STRUCT));
 		AddAPPEXAID(extempAid);
         sdkKbWaitKey(SDK_KEY_MASK_ALL, 500);
 	}
@@ -1112,6 +1114,8 @@ void BCTCUpDataParam_AID()
     u8 step = 1;
     s32 len;
     u8 disp[32] = {0};
+	u32 timeout=5*1000;
+	long timerid;
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Download AID", SDK_DISP_DEFAULT);
@@ -1175,6 +1179,7 @@ void BCTCUpDataParam_AID()
             BCTCSendData(ComPackSend, ComPackSendLen);
         }
         step++;
+		timerid = sdkTimerGetId();
 
         while(!EndFlag)
         {
@@ -1182,46 +1187,52 @@ void BCTCUpDataParam_AID()
 
             if(len <= 0)
             {
-                sdkFreeMem(ComPackRecv);
-                ComPackRecv = NULL;
-                EndFlag = 1;
-                retCode = SDK_ERR;
-                break;
+				if(sdkTimerIsEnd(timerid, timeout))
+				{
+					sdkFreeMem(ComPackRecv);
+					ComPackRecv = NULL;
+					EndFlag = 1;
+					retCode = SDK_ERR;
+					break;
+				}
             }
-            ComPackRecvLen = len;
+			else
+			{
+				ComPackRecvLen = len;
 
-            if((ComPackRecv[1] != BCTC_MNG_DownloadAID_RECV) || (ComPackRecv[0] != 0x02))
-            {
-                sdkFreeMem(ComPackRecv);
-                ComPackRecv = NULL;
-                EndFlag = 1;
-                retCode = SDK_ERR;
-                break;
-            }
+				if((ComPackRecv[1] != BCTC_MNG_DownloadAID_RECV) || (ComPackRecv[0] != 0x02))
+				{
+					sdkFreeMem(ComPackRecv);
+					ComPackRecv = NULL;
+					EndFlag = 1;
+					retCode = SDK_ERR;
+					break;
+				}
 
-            if(memcmp(&ComPackRecv[4], "\x03\x01\x00", 3) == 0)	//2021.9.10 lishiyao 下载完成
-            {
-                sdkFreeMem(ComPackRecv);
-                ComPackRecv = NULL;
-                retCode = SDK_OK;
-                EndFlag = 1;
-                break;
-            }
+				if(memcmp(&ComPackRecv[4], "\x03\x01\x00", 3) == 0) //2021.9.10 lishiyao 下载完成
+				{
+					sdkFreeMem(ComPackRecv);
+					ComPackRecv = NULL;
+					retCode = SDK_OK;
+					EndFlag = 1;
+					break;
+				}
 
 
-            TagLen = ComPackRecv[2] * 256 + ComPackRecv[3];
-            TraceHex("", "AID_recvdata ", ComPackRecv, TagLen + 4);
+				TagLen = ComPackRecv[2] * 256 + ComPackRecv[3];
+				TraceHex("", "AID_recvdata ", ComPackRecv, TagLen + 4);
 
-            if(SDK_OK == BCTCTlvToAIDStruct(&ComPackRecv[4], TagLen))
-            {
-                retCode = SDK_OK;
-            }
-            else
-            {
-                EndFlag = 1;
-                retCode = SDK_ERR;
-            }
-            break;
+				if(SDK_OK == BCTCTlvToAIDStruct(&ComPackRecv[4], TagLen))
+				{
+					retCode = SDK_OK;
+				}
+				else
+				{
+					EndFlag = 1;
+					retCode = SDK_ERR;
+				}
+				break;
+			}
         }
 
         if(EndFlag)
@@ -1248,6 +1259,7 @@ void BCTCUpDataParam_AID()
 	{
 		sdkKbWaitKey(SDK_KEY_MASK_ALL, TV_AUTORET);
 	}
+
 }
 
 s32 TlvToTERMINFO(unsigned char *buf, int ilen)
@@ -3397,35 +3409,13 @@ s32 BCTCSingleTrade(void)
 
 void BCTCSendDataRecord(void)
 {
-    u8 ComPackSend[256],data[256];
+    u8 ComPackSend[256],data[256],aid[16];
     u16 ComPackSendLen, ComPackRecvLen;
-    u8 MsgType,firstByte;
-	u8 *tag;
-	s32 dataLen=0,i,tagLen,protolLen,index;
-	u8 tagList[][3] = {
-		{0x9F,0x02,0x00},
-		{0x9F,0x03,0x00},
-		{0x9F,0x26,0x00},
-		{0x82,0x00,0x00},
-		{0x9F,0x36,0x00},
-		{0x9F,0x27,0x00},
-		{0x9F,0x10,0x00},
-		{0x9F,0x1A,0x00},
-		{0x95,0x00,0x00},
-		{0x5F,0x2A,0x00},
-		{0x9A,0x00,0x00},
-		{0x9C,0x00,0x00},
-		{0x9F,0x37,0x00},
-		{0x9F,0x35,0x00},
-		{0x57,0x00,0x00},
-		{0x9F,0x34,0x00},
-		{0x84,0x00,0x00},
-		{0x5F,0x34,0x00},
-		{0x5A,0x00,0x00},
-		{0x9F,0x1F,0x00},
-		{0x5F,0x20,0x00},
-		{0x9F,0x77,0x00},
-	};
+    u8 MsgType,Transtype,ATOLLen;
+	u8 *tag,*ATOL;
+	s32 dataLen=0,i,protolLen,index,tmplen;
+	s32 j = 0;
+	unsigned char firstByte,secondByte;
 
     MsgType = BCTC_MNG_TermDispUI_SEND;
 
@@ -3448,51 +3438,102 @@ void BCTCSendDataRecord(void)
 
 	ComPackSendLen = 0;
 	ComPackSend[ComPackSendLen++] = MsgType;
-	Trace("BCTC", "Msgtype: %02X\r\n", MsgType);
-	Trace("BCTC", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
-	Trace("BCTC", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
+	Trace("Test", "Msgtype: %02X\r\n", MsgType);
+	Trace("Test", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
+	Trace("Test", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
 
 	memcpy(ComPackSend+ComPackSendLen, "\xFF\x81\x05", 4);
 	ComPackSendLen += 4;
 	index = ComPackSendLen - 1;
 
+	sdkEMVBaseReadTLV("\x9C", &Transtype, &tmplen);
+	sdkEMVBaseReadTLV("\x9F\x06", aid, &tmplen);
+
+
+	TraceHex("Test", "aid in Test AID: ", aid, tmplen);
+	Trace("Test", "TransType in Test AID: %02X\r\n ", Transtype);
+
+//	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
+//	{
+//		Trace("Test", "AidLen in Extern AID: %d\r\n ", appex_aid_list[i].AidLen);
+//		TraceHex("Test", "aid in Extern AID", appex_aid_list[i].Aid, appex_aid_list[i].AidLen);
+//		Trace("Test", "TransType in Extern AID: %02X\r\n ", appex_aid_list[i].TransType);
+//		TraceHex("Test", "RemovalTimeout in Extern AID", appex_aid_list[i].RemovalTimeout, 2);
+//		Trace("Test", "Implementation in Extern AID: %02X\r\n ", appex_aid_list[i].Implementation);
+//		Trace("Test", "ZeroAmtAllowFlag in Extern AID: %02X\r\n ", appex_aid_list[i].ZeroAmtAllowFlag);
+//		Trace("Test", "StatusCheckFlag in Extern AID: %02X\r\n ", appex_aid_list[i].StatusCheckFlag);
+//		TraceHex("Test", "CLAppCap in Extern AID", appex_aid_list[i].CLAppCap, 5);
+//		TraceHex("Test", "ATOL in Extern AID", appex_aid_list[i].ATOL, appex_aid_list[i].ATOLLen);
+//		TraceHex("Test", "MTOL in Extern AID", appex_aid_list[i].MTOL, appex_aid_list[i].MTOLLen);
+//	}
+
+	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
+    {
+		if((appex_aid_list[i].AidLen == tmplen) && (memcmp(appex_aid_list[i].Aid,aid,tmplen) == 0) && (appex_aid_list[i].TransType == Transtype))
+        {
+			break;
+        }
+    }
+
+	j = 0;
 	protolLen = 0;
-	for(i = 0; i < sizeof(tagList)/sizeof(tagList[0]); i++)
+
+	Trace("Test", "ATOL Len in Extern AID: %d\r\n", appex_aid_list[i].ATOLLen);
+	TraceHex("Test", "ATOL in Extern AID: ", appex_aid_list[i].ATOL, appex_aid_list[i].ATOLLen);
+
+	while(j < appex_aid_list[i].ATOLLen)
 	{
-		memset(data, 0, sizeof(data));
-		firstByte = tagList[i][0];
-		if ((firstByte & 0x1F) == 0x1F)
+//		Trace("Test", "Entry while\r\n");
+		firstByte = appex_aid_list[i].ATOL[j];
+//		Trace("Test", "firstByte: %02X\r\n", firstByte);
+		if((firstByte & 0x1F) == 0x1F)
 		{
-			tagLen = 2;
+//			secondByte = appex_aid_list[i].ATOL[j+1];
+//			Trace("Test", "Entry Double byte TAG deal\r\n");
+			tag = (u8 *)sdkGetMem(2);
+			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 2);
+//			TraceHex("Test", "Tag in ATOL", tag, 2);
+			if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
+			{
+				memcpy(ComPackSend+ComPackSendLen, tag, 2);
+				ComPackSendLen += 2;
+				protolLen += 2;
+				ComPackSend[ComPackSendLen++] = dataLen;
+//				Trace("Test", "data len: %d\r\n", dataLen);
+				protolLen++;
+				memcpy(ComPackSend+ComPackSendLen, data, dataLen);
+//				TraceHex("Test", "data", data, dataLen);
+				ComPackSendLen += dataLen;
+				protolLen += dataLen;
+			}
+			sdkFreeMem(tag);
+			j += 2;
 		}
 		else
 		{
-			tagLen = 1;
+//			Trace("Test", "Entry Single byte TAG deal\r\n");
+			tag = (u8 *)sdkGetMem(1);
+			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 1);
+//			Trace("Test", "Tag in ATOL: %02X\r\n", tag);
+			if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
+			{
+				memcpy(ComPackSend+ComPackSendLen, tag, 1);
+				ComPackSendLen += 1;
+				protolLen += 1;
+				ComPackSend[ComPackSendLen++] = dataLen;
+//				Trace("Test", "data len: %d\r\n", dataLen);
+				protolLen++;
+				memcpy(ComPackSend+ComPackSendLen, data, dataLen);
+//				TraceHex("Test", "data", data, dataLen);
+				ComPackSendLen += dataLen;
+				protolLen += dataLen;
+			}
+			sdkFreeMem(tag);
+			j += 1;
 		}
-
-		tag = (u8 *)sdkGetMem(tagLen);
-		if(tag == NULL)
-		{
-			return;
-		}
-//		memset(tag, 0, tagLen);
-		memcpy(tag, tagList[i], tagLen);
-
-		if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
-		{
-			memcpy(ComPackSend+ComPackSendLen, tag, tagLen);
-			ComPackSendLen += tagLen;
-			protolLen += tagLen;
-			ComPackSend[ComPackSendLen++] = dataLen;
-			protolLen++;
-			memcpy(ComPackSend+ComPackSendLen, data, dataLen);
-			ComPackSendLen += dataLen;
-			protolLen += dataLen;
-		}
-
-		sdkFreeMem(tag);
 	}
 
+//	Trace("Test", "protolLen: %dd\r\n", protolLen);
 	ComPackSend[index] = protolLen;
 
 	BCTCSendData(ComPackSend, ComPackSendLen);
@@ -3565,7 +3606,7 @@ void BCTCSendOutCome(void)
 	ComPackSendLen+=2;
 
 	ret = BCTCSendData(ComPackSend, ComPackSendLen);
-
+	sdkmSleep(100);
 	if(flag & 0x20)
 	{
 		BCTCSendDataRecord();

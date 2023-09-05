@@ -73,8 +73,10 @@ unsigned char pure_Outcome_CommunicationErrors_PaymentTransactionNotCompleted(PU
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_TRYAGAIN, SDK_OUTCOME_START_B, SDK_OUTCOME_CVM_NA, 1, 1, 0, 0, SDK_OUTCOME_AIP_NA, 0, 0x13, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_PROCESSINGERR, 0x13, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
 
@@ -93,8 +95,10 @@ unsigned char pure_Outcome_CommunicationErrors_UnknownPaymentResult(PURETradeUni
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_TRYAGAIN, SDK_OUTCOME_START_B, SDK_OUTCOME_CVM_NA, 1, 1, 0, 0, SDK_OUTCOME_AIP_NA, 0, 0x13, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_PROCESSINGERR, 0x13, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
 	return RLT_ERR_EMV_TransRestart;
@@ -104,8 +108,10 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OndeviceCVMRequested(PU
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION_ONDEVICECVM, SDK_OUTCOME_START_B, SDK_OUTCOME_CVM_NA, 1, 1, 0, 1, SDK_OUTCOME_AIP_NA, 0, 0x13, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_PROCESSINGERR, 0x13, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_SEEPHONE, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
 	return RLT_ERR_EMV_SEEPHONE;
@@ -115,6 +121,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_TryOtherInterface(PURET
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_TRYANOTHERINTERFACE, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_CONTACTCHIP, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_ERROR_SWITCHINTERFACE, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	return RLT_ERR_EMV_SWITCHINTERFACE;
@@ -133,6 +140,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_TransactionApproved(PUR
 
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, CVM, 1, 0, 1, 1, SDK_OUTCOME_AIP_CONTACTCHIP, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == tempApp_UnionStruct->EMVTradeParam->PureCVMParameter)
 	{
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_APPROVEDSIGN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
@@ -150,6 +158,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_TransactionDeclined(PUR
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 1, 1, SDK_OUTCOME_AIP_CONTACTCHIP, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_NOTAUTHORISED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	return RLT_EMV_OFFLINE_DECLINE;
@@ -161,6 +170,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequest2ndTap(PUR
 
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ONLINE_TWOPRESENTMENTS, SDK_OUTCOME_START_B, CVM, 1, 1, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_EMVDATA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == CVM || SDK_OUTCOME_CVM_NOCVMREQ == CVM)
 	{
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
@@ -170,6 +180,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequest2ndTap(PUR
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSENTERPIN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
 	}
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
 
@@ -186,6 +197,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequestLongTap(PU
 
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ONLINE_TWOPRESENTMENTS, SDK_OUTCOME_START_B, CVM, 1, 1, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, RemovalTimeout, SDK_OUTCOME_ONLINERESPDATA_ANY);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == CVM || SDK_OUTCOME_CVM_NOCVMREQ == CVM)
 	{
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
@@ -195,6 +207,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequestLongTap(PU
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSENTERPIN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
 	}
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PROCESSING, SDK_UI_STATUS_PROCESSING, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
 
@@ -210,6 +223,7 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequestNoAddition
 
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ONLINE_NOADDPREMENT, SDK_OUTCOME_START_B, CVM, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == CVM || SDK_OUTCOME_CVM_NOCVMREQ == CVM)
 	{
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
@@ -227,6 +241,7 @@ unsigned char pure_Outcome_NonFinancialCompleted_OfflineAuthentication(PURETrade
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSREMOVECARD, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	return RLT_EMV_TERMINATE_TRANSERR;
@@ -236,6 +251,7 @@ unsigned char pure_Outcome_NonFinancialCompleted_RetrievalOfDataElements(PURETra
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSREMOVECARD, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	return RLT_EMV_TERMINATE_TRANSERR;
@@ -245,6 +261,7 @@ unsigned char pure_Outcome_EndApplication_EmptyCandidateList(PURETradeUnionStruc
 {
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSREMOVECARD, SDK_UI_STATUS_PROCESSINGERR, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	return RLT_EMV_TERMINATE_TRANSERR;

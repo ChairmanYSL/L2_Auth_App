@@ -82,21 +82,21 @@ typedef struct
 	unsigned char AidLen;
     unsigned char Aid[16];
 	unsigned char TransType;
-    unsigned char TransCurcyCode[2];             //tag'5F2A'
-    unsigned char TransCurcyExp;                 //tag'5F36'
-    unsigned char TransReferCurcyCode[2];        //tag'9F3C'
-    unsigned char TransReferCurcyExp;            //tag'9F3D'
-    unsigned char AcquireID[6];                  //tag'9F01'
-    unsigned char TermID[8];                     //tag'9F1C'
-    unsigned char MerchCateCode[2];              //tag'9F15'
-    unsigned char MerchID[15];                   //tag'9F16'
-    unsigned char MerchantNameLen;
-    unsigned char MerchantName[20];				//tag'9F4E'
-    unsigned char TermTDOLLen;
-    unsigned char TermTDOL[64];
-    unsigned char TermTransPredicable[4];		//tag'9F66'
-	unsigned char terminalcapability[3];		//tag'9F33'
-    unsigned char terminaltype;
+//    unsigned char TransCurcyCode[2];             //tag'5F2A'
+//    unsigned char TransCurcyExp;                 //tag'5F36'
+//    unsigned char TransReferCurcyCode[2];        //tag'9F3C'
+//    unsigned char TransReferCurcyExp;            //tag'9F3D'
+//    unsigned char AcquireID[6];                  //tag'9F01'
+//    unsigned char TermID[8];                     //tag'9F1C'
+//    unsigned char MerchCateCode[2];              //tag'9F15'
+//    unsigned char MerchID[15];                   //tag'9F16'
+//    unsigned char MerchantNameLen;
+//    unsigned char MerchantName[20];				//tag'9F4E'
+//    unsigned char TermTDOLLen;
+//    unsigned char TermTDOL[64];
+//    unsigned char TermTransPredicable[4];		//tag'9F66'
+//	unsigned char terminalcapability[3];		//tag'9F33'
+//    unsigned char terminaltype;
 	unsigned char RemovalTimeout[2];
 	unsigned char Implementation;
 	unsigned char ZeroAmtAllowFlag;		//0-:allow
@@ -106,13 +106,13 @@ typedef struct
 	unsigned char ATOLLen;
 	unsigned char MTOL[64];		//Mandatory Tag Object List
 	unsigned char MTOLLen;
-	unsigned char ATDTOL[64];	//Authentication Transaction Data Tag Object List
-	unsigned char ATDTOLLen;
-	unsigned char TransData[256];	//9F76
-	unsigned char TransDataLen;
+//	unsigned char ATDTOL[64];	//Authentication Transaction Data Tag Object List
+//	unsigned char ATDTOLLen;
+//	unsigned char TransData[256];	//9F76
+//	unsigned char TransDataLen;
 }APPEX_AID_STRUCT;
 
-EXTERN APPEX_AID_STRUCT appex_aid_list[40];
+EXTERN APPEX_AID_STRUCT appex_aid_list[10];
 
 extern void ReadAPPEXAID();
 extern void InitAPPEXAID();

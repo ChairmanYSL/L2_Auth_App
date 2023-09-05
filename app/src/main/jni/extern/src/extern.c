@@ -323,21 +323,21 @@ void AddTestCardAID(void)
 	memset(&extempAid, 0, sizeof(APPEX_AID_STRUCT));
 	memcpy(extempAid.Aid, "\xA0\x00\x00\x02\x80\x20\x10", 7);
 	extempAid.AidLen = 7;
-	memcpy(extempAid.TransCurcyCode, "\x09\x78", 2);
-	extempAid.TransCurcyExp = appex_aid_list[0].TransCurcyExp;
-	memcpy(extempAid.TransReferCurcyCode, appex_aid_list[0].TransReferCurcyCode, 2);
-	extempAid.TransReferCurcyExp = appex_aid_list[0].TransReferCurcyExp;
-	memcpy(extempAid.AcquireID, appex_aid_list[0].AcquireID, 6);
-	memcpy(extempAid.TermID, appex_aid_list[0].TermID, 8);
-	memcpy(extempAid.MerchCateCode, appex_aid_list[0].MerchCateCode, 2);
-	memcpy(extempAid.MerchID, appex_aid_list[0].MerchID, 15);
-	extempAid.MerchantNameLen = appex_aid_list[0].MerchantNameLen;
-	memcpy(extempAid.MerchantName, appex_aid_list[0].MerchantName, 20);
-	extempAid.TermTDOLLen = appex_aid_list[0].TermTDOLLen;
-	memcpy(extempAid.TermTDOL, appex_aid_list[0].TermTDOL, 64);
-	memcpy(extempAid.TermTransPredicable, appex_aid_list[0].TermTransPredicable, 4);
-	memcpy(extempAid.terminalcapability, appex_aid_list[0].terminalcapability, 3);
-	extempAid.terminaltype = appex_aid_list[0].terminaltype;
+//	memcpy(extempAid.TransCurcyCode, "\x09\x78", 2);
+//	extempAid.TransCurcyExp = appex_aid_list[0].TransCurcyExp;
+//	memcpy(extempAid.TransReferCurcyCode, appex_aid_list[0].TransReferCurcyCode, 2);
+//	extempAid.TransReferCurcyExp = appex_aid_list[0].TransReferCurcyExp;
+//	memcpy(extempAid.AcquireID, appex_aid_list[0].AcquireID, 6);
+//	memcpy(extempAid.TermID, appex_aid_list[0].TermID, 8);
+//	memcpy(extempAid.MerchCateCode, appex_aid_list[0].MerchCateCode, 2);
+//	memcpy(extempAid.MerchID, appex_aid_list[0].MerchID, 15);
+//	extempAid.MerchantNameLen = appex_aid_list[0].MerchantNameLen;
+//	memcpy(extempAid.MerchantName, appex_aid_list[0].MerchantName, 20);
+//	extempAid.TermTDOLLen = appex_aid_list[0].TermTDOLLen;
+//	memcpy(extempAid.TermTDOL, appex_aid_list[0].TermTDOL, 64);
+//	memcpy(extempAid.TermTransPredicable, appex_aid_list[0].TermTransPredicable, 4);
+//	memcpy(extempAid.terminalcapability, appex_aid_list[0].terminalcapability, 3);
+//	extempAid.terminaltype = appex_aid_list[0].terminaltype;
 	memcpy(extempAid.RemovalTimeout, appex_aid_list[0].RemovalTimeout, 2);
 	extempAid.Implementation = 0x2C;
 	extempAid.ZeroAmtAllowFlag = appex_aid_list[0].ZeroAmtAllowFlag;
@@ -347,8 +347,8 @@ void AddTestCardAID(void)
 	extempAid.ATOLLen = appex_aid_list[0].ATOLLen;
 	memcpy(extempAid.MTOL, "\x8C\x00\x00\x57\x00\x00", 64);
 	extempAid.MTOLLen = appex_aid_list[0].MTOLLen;
-	memcpy(extempAid.ATDTOL, appex_aid_list[0].ATDTOL, 64);
-	extempAid.ATDTOLLen = appex_aid_list[0].ATDTOLLen;
+//	memcpy(extempAid.ATDTOL, appex_aid_list[0].ATDTOL, 64);
+//	extempAid.ATDTOLLen = appex_aid_list[0].ATDTOLLen;
 
 	AddAPPEXAID(&extempAid);
 }
@@ -453,30 +453,59 @@ void SendTCPTest(void)
 	BCTCSendData(data, 4);
 }
 
+//unsigned char pure_Outcome_FinancialTransactionCompleted_TransactionApproved(PURETradeUnionStruct *tempApp_UnionStruct)
+//{
+//	unsigned char CVM = tempApp_UnionStruct->EMVTradeParam->PureCVMParameter;
+//	unsigned char CVMRes;
+//
+//	emvbase_avl_gettagvalue_spec(EMVTAG_CVMResult, &CVMRes, 2, 1);
+//	if(0x00 != CVMRes && 0x02 != CVMRes)
+//	{
+//		CVM = SDK_OUTCOME_CVM_NA;
+//	}
+//
+//	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, CVM, 1, 0, 1, 1, SDK_OUTCOME_AIP_CONTACTCHIP, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+//	tempApp_UnionStruct->SendOutcome();
+//	sdkmSleep(100);
+//	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == tempApp_UnionStruct->EMVTradeParam->PureCVMParameter)
+//	{
+//		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_APPROVEDSIGN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+//	}
+//	else
+//	{
+//		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_APPROVED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+//	}
+//
+//	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+//	return RLT_EMV_OFFLINE_APPROVE;
+//}
+
+
 void HostOutcomeTest(void)
 {
 
 	sdkEMVBaseTransInit();
-	sdkEMVBaseConfigTLV("\x9F\x02", "\x00\x0\x00\x00\x00\x01", 6);
-	sdkEMVBaseConfigTLV("\x9F\x03", "\x00\x0\x00\x00\x00\x00", 6);
+	sdkEMVBaseConfigTLV("\x9F\x02", "\x00\x00\x00\x00\x00\x01", 6);
+	sdkEMVBaseConfigTLV("\x9F\x03", "\x00\x00\x00\x00\x00\x00", 6);
+	sdkEMVBaseConfigTLV("\x9F\x26", "\xAA\xBB\xCC\xDD\xEE\xFF\x11\x22", 8);
+	sdkEMVBaseConfigTLV("\x82", "\x1D\x0D", 2);
+	sdkEMVBaseConfigTLV("\x9F\x36", "\x00\x1D", 2);
+	sdkEMVBaseConfigTLV("\x9F\x27", "\x40", 1);
+	sdkEMVBaseConfigTLV("\x9F\x10", "\x10\x20\x30\x40\x50\x60\x70\x80", 8);
+	sdkEMVBaseConfigTLV("\x9F\x1A", "\x09\x78", 2);
+	sdkEMVBaseConfigTLV("\x95", "\x00\x00\x00\x00\x00", 5);
 
-
-
-
+	sdkEMVBaseConfigTLV("\x9F\x06", "\xD9\x99\x99\x99\x99\x10\x10", 7);
+	sdkEMVBaseConfigTLV("\x9C", "\x00", 1);
 
 	sdkCleanOutcomeParam();
-	sdkSetOutcomeParam(SDK_OUTCOME_RESULT_TRYAGAIN, SDK_OUTCOME_START_B, SDK_OUTCOME_CVM_NA, 1, 1, 0, 0, SDK_OUTCOME_AIP_NA, 0, 0x13, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+	sdkSetOutcomeParam(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, 0x20, 1, 0, 1, 1, SDK_OUTCOME_AIP_CONTACTCHIP, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 	BCTCSendOutCome();
-	sdkmSleep(5000);
+	sdkmSleep(100);
 
 	sdkCleanUIRequestParam();
-	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_PROCESSINGERR, 0x13, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+	sdkSetUIRequestParam(SDK_UI_MSGID_APPROVEDSIGN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
-	sdkmSleep(5000);
-
-	sdkCleanUIRequestParam();
-	sdkSetUIRequestParam(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
-	BCTCSendUIRequest(PURE_UIREQ_RESTART);
 }
 
 void *sdkGetMem(unsigned int size)
@@ -522,7 +551,7 @@ int sdkIccOpenRfDev()
 int sdkIccPowerOnAndSeek()
 {
 	u8 buf[6];
-	int ret,rslt;
+	int ret,rslt,key;
     u32 timeoutvalue;
 	long timerid;
 
@@ -556,6 +585,12 @@ int sdkIccPowerOnAndSeek()
 		else
 		{
 			rslt = SDK_ERR;
+		}
+		sdkmSleep(100);
+		key = sdkKbGetKey();
+		if(SDK_KEY_ESC == key)
+		{
+			return SDK_ICC_NOCARD;
 		}
 	}
 
@@ -783,7 +818,7 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, u1
 	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, psiOutLen);
 	timerid2 = sdkTimerGetId();
 
-	if(timerid != 0 && (timerid + 1000 < timerid2))
+	if(timerid != 0 && (timerid + 3000 < timerid2))
 	{
 		rslt = DetecteOther();
 		Trace("lishiyao", "DetecteOther ret = %d\r\n", rslt);
@@ -941,6 +976,7 @@ s32 sdkDelFile(const u8 *pasFile)
 	}
 
 	ret = remove(pasFile);
+	Trace("extern", "remove ret = %d\r\n", ret);
 	if(ret == 0)
 	{
 		return SDK_OK;

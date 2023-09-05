@@ -535,7 +535,7 @@ void sdkOpenWifi(const char *IPAddress_cString, int port)
 		Trace("JNI", "IPAddress_cString: %s\r\n", IPAddress_cString);
 		javaString = (*jniEnv)->NewStringUTF(jniEnv, IPAddress_cString);
 		Trace("JNI", "after NewStringUTF pointer: %p\r\n", javaString);
-		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port, (jint)1100);
+		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port, (jint)2048);
         (*jniEnv)->DeleteLocalRef(jniEnv, javaString);
 	}
 	freeDeviceObject();
@@ -559,8 +559,8 @@ void sdkSendWifiData(unsigned char *data, int dataLen)
 	freeDeviceObject();
 }
 
-void sdkStartListenTCP(int port)
-{
+//void sdkStartListenTCP(int port)
+//{
 //	int result = 1;
 //    if(DeviceOpera == NULL || mDeviceOpera == NULL)
 //	{
@@ -571,7 +571,7 @@ void sdkStartListenTCP(int port)
 //		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, ListenTCP, (jint)port);
 //	}
 //	freeDeviceObject();
-}
+//}
 
 int sdkReadWifiData(unsigned char *data, int maxLen)
 {

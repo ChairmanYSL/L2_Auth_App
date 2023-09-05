@@ -983,52 +983,52 @@ s32 SetRiskParam(SDK_EMVBASE_AID_STRUCT *pstOutAIDList)
 
 s32 SetTerminalType(SDK_EMVBASE_AID_STRUCT *pstOutAIDList)
 {
-    int nRet;
-
-	APPEX_AID_STRUCT extempAid;
-	memset(&extempAid, 0, sizeof(APPEX_AID_STRUCT));
-	GetAPPEXAID(&extempAid,pstOutAIDList->Aid, pstOutAIDList->AidLen);
-
-    nRet = InputBcd("Terminal Type", "Terminal Type:", NULL, &extempAid.terminaltype, 2, 2, false, SDK_MMI_HEX);
-    if (nRet != SDK_KEY_ENTER) {return nRet; }
-
-	AddAPPEXAID(&extempAid);
-    return nRet;
+//    int nRet;
+//
+//	APPEX_AID_STRUCT extempAid;
+//	memset(&extempAid, 0, sizeof(APPEX_AID_STRUCT));
+//	GetAPPEXAID(&extempAid,pstOutAIDList->Aid, pstOutAIDList->AidLen);
+//
+//    nRet = InputBcd("Terminal Type", "Terminal Type:", NULL, &extempAid.terminaltype, 2, 2, false, SDK_MMI_HEX);
+//    if (nRet != SDK_KEY_ENTER) {return nRet; }
+//
+//	AddAPPEXAID(&extempAid);
+//    return nRet;
 }
 s32 SetTerminalTTQ(SDK_EMVBASE_AID_STRUCT *pstOutAIDList)
 {
-    int nRet;
-    u8 asTmp[SDK_MAX_STR_LEN + 2];
-    int i;
-
-    memset(asTmp, 0x00, sizeof(asTmp));
-    //lilin 2015.04.10 10:9
-#if 0
-    asTmp[0] = pstOutAIDList->TermDDOLLen * 2;
-    sdkBcdToAsc(&asTmp[1], pstOutAIDList->TermDDOL, pstOutAIDList->TermDDOLLen);
-#else
-	APPEX_AID_STRUCT extempAid;
-	memset(&extempAid, 0, sizeof(APPEX_AID_STRUCT));
-	GetAPPEXAID(&extempAid,pstOutAIDList->Aid, pstOutAIDList->AidLen);
-	sdkBcdToAsc(&asTmp[0], extempAid.TermTransPredicable, 4);
-	TraceHex("", "extempAid.TermTransPredicable", extempAid.TermTransPredicable, 4);
-	TraceHex("", "asTmp", asTmp, 8);
-#endif
-
-    nRet = Inputstr("Set Terminal TTQ", "Pls Set Terminal TTQ:", NULL, asTmp, 8, 8, SDK_MMI_HEX);
-
-    if (nRet == SDK_KEY_ENTER)
-    {
-        i = strlen(asTmp);
-
-        if (i > 8) {i = 8; }
-        sdkAscToBcd(extempAid.TermTransPredicable, asTmp, i);
-		AddAPPEXAID(&extempAid);
-        #ifdef EMVB_DEBUG
-            TraceHex(""," SetTerminalTTQ TermTransPredicable",pstOutAIDList->TermTransPredicable,4);
-        #endif
-    }
-    return nRet;
+//    int nRet;
+//    u8 asTmp[SDK_MAX_STR_LEN + 2];
+//    int i;
+//
+//    memset(asTmp, 0x00, sizeof(asTmp));
+//    //lilin 2015.04.10 10:9
+//#if 0
+//    asTmp[0] = pstOutAIDList->TermDDOLLen * 2;
+//    sdkBcdToAsc(&asTmp[1], pstOutAIDList->TermDDOL, pstOutAIDList->TermDDOLLen);
+//#else
+//	APPEX_AID_STRUCT extempAid;
+//	memset(&extempAid, 0, sizeof(APPEX_AID_STRUCT));
+//	GetAPPEXAID(&extempAid,pstOutAIDList->Aid, pstOutAIDList->AidLen);
+//	sdkBcdToAsc(&asTmp[0], extempAid.TermTransPredicable, 4);
+//	TraceHex("", "extempAid.TermTransPredicable", extempAid.TermTransPredicable, 4);
+//	TraceHex("", "asTmp", asTmp, 8);
+//#endif
+//
+//    nRet = Inputstr("Set Terminal TTQ", "Pls Set Terminal TTQ:", NULL, asTmp, 8, 8, SDK_MMI_HEX);
+//
+//    if (nRet == SDK_KEY_ENTER)
+//    {
+//        i = strlen(asTmp);
+//
+//        if (i > 8) {i = 8; }
+//        sdkAscToBcd(extempAid.TermTransPredicable, asTmp, i);
+//		AddAPPEXAID(&extempAid);
+//        #ifdef EMVB_DEBUG
+//            TraceHex(""," SetTerminalTTQ TermTransPredicable",pstOutAIDList->TermTransPredicable,4);
+//        #endif
+//    }
+//    return nRet;
 }
 /*****************************************************************************
 ** Descriptions:	����EMV aid����
@@ -1871,9 +1871,18 @@ s32 ClearBlackDataMenu()
     return SDK_OK;
 }
 
+void DelAPPEXAID()
+{
+    u8 fn[64] = {0};
+    sdkSysGetCurAppDir(fn);
+    strcat(fn, "appexaid");
+	Trace("APPEXAID", "DelAPPEXAID\r\n");
+	sdkDelFile(fn);
+}
+
 void InitAPPEXAID()
 {
-    memset(appex_aid_list,0,sizeof(appex_aid_list));
+    memset(appex_aid_list, 0, sizeof(appex_aid_list));
 	Trace("InitAPPEXAID", "sizeof(appex_aid_list) = %d\r\n", sizeof(appex_aid_list));
 	SaveAPPEXAID();
 }
@@ -1926,6 +1935,7 @@ void PostInitSysData(void)
 		case SDK_KEY_ENTER:
 			sdkEMVBaseDelAllAIDLists();
 			sdkEMVBaseDelAllCAPKLists();
+			DelAPPEXAID();
 			InitAPPEXAID();
 			SaveAPPEXAID();
 			memset(gstbctcblack, 0, sizeof(gstbctcblack));
@@ -1955,10 +1965,13 @@ void AddAPPEXAID(APPEX_AID_STRUCT *extempAid)
 		return;
 	}
 
+//	Trace("APPEXAID", "conter: %d\r\n", sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT));
+
 	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
 	{
         if((appex_aid_list[i].AidLen == extempAid->AidLen) && (memcmp(appex_aid_list[i].Aid,extempAid->Aid,extempAid->AidLen) == 0) && (appex_aid_list[i].TransType == extempAid->TransType))
 		{
+//			Trace("APPEXAID", "hit cache1\r\n");
 			memcpy(&appex_aid_list[i],extempAid,sizeof(APPEX_AID_STRUCT));
 			SaveAPPEXAID();
 			return;
@@ -1969,15 +1982,18 @@ void AddAPPEXAID(APPEX_AID_STRUCT *extempAid)
 //	{
 //		if(appex_aid_list[i].AidLen == extempAid->AidLen && memcmp(appex_aid_list[i].Aid,extempAid->Aid,extempAid->AidLen) == 0)
 //		{
+//			Trace("APPEXAID", "hit cache2\r\n");
 //			memcpy(&appex_aid_list[i],extempAid,sizeof(APPEX_AID_STRUCT));
 //			SaveAPPEXAID();
 //			return;
 //		}
 //	}
+
 	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
 	{
 		if(appex_aid_list[i].AidLen == 0)
 		{
+//			Trace("APPEXAID", "hit cache3\r\n");
 			memcpy(&appex_aid_list[i],extempAid,sizeof(APPEX_AID_STRUCT));
 			SaveAPPEXAID();
 			return;
@@ -2044,8 +2060,8 @@ s32 IccSetAIDEX()
 
 		if((appex_aid_list[i].AidLen == aidintermlen) && (memcmp(appex_aid_list[i].Aid,aidinterm,aidintermlen) == 0) && (appex_aid_list[i].TransType == Transtype))
         {
-			sdkEMVBaseConfigTLV("\x5F\x2A", (termaidparam+i) ->TransCurcyCode, 2);
-			TraceHex("SetBeforeGPO", "TransCurcyCode ", (termaidparam + i)->TransCurcyCode, 2);
+//			sdkEMVBaseConfigTLV("\x5F\x2A", (termaidparam+i) ->TransCurcyCode, 2);
+//			TraceHex("SetBeforeGPO", "TransCurcyCode ", (termaidparam + i)->TransCurcyCode, 2);
 
 			sdkEMVBaseConfigTLV("\xFF\x81\x79", (termaidparam + i)->RemovalTimeout, 2);
 			TraceHex("SetBeforeGPO", "Removal Timeout ", (termaidparam + i)->RemovalTimeout, 2);

@@ -1172,7 +1172,6 @@ s32 DealTrade(void)
 	u8 FlowContinueFlag = 1;
 	u8 AmountBCD[6], Passwd[64];
 	s32 len;
-	u8 trendit_dir[]="/sdcard/pure/";
 
 	gCollisionflag = 0;
 	gCollisionCounter = 0;
@@ -1189,7 +1188,6 @@ _RETRY:
 
 	memset(gstResponseCode,0,sizeof(gstResponseCode));
 
-	sdkSysSetCurAppDir(trendit_dir, strlen(trendit_dir));
 	sdkEMVBaseTransInit();
 	sdkPureTransInit();
 	sdkPureSetSendOutcome(BCTCSendOutCome);
@@ -1215,15 +1213,18 @@ _SECONDTAP:
 	}
 	else if(SDK_ERR == ret)
 	{
+		sdkIccCloseRfDev();
 		sdkTestIccDispText("Read Card error,Tx Stop");
 		return ret;
 	}
 	else if(SDK_ICC_NOCARD == ret)
 	{
+		sdkIccCloseRfDev();
 		return SDK_OK;
 	}
 	else
 	{
+		sdkIccCloseRfDev();
 		return SDK_ERR;
 	}
 
