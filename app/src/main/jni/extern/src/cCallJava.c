@@ -355,7 +355,7 @@ int clearLcdLine(int startLine, int endLine)
 int dispLcdLine(int line, int col, char* dispText, int attr)
 {
     int result = 1;
-    jstring jstr;
+//    jstring jstr;
 
 
     if(DeviceOpera == NULL || mDeviceOpera == NULL) {
@@ -363,9 +363,9 @@ int dispLcdLine(int line, int col, char* dispText, int attr)
     }
 
     if (result == 1) {
-        jstr = (*jniEnv)->NewStringUTF(jniEnv, dispText);
-        (*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, Lcd_PrintfXY, line, col, jstr, attr);
-        (*jniEnv)->DeleteLocalRef(jniEnv, jstr);
+//        jstr = (*jniEnv)->NewStringUTF(jniEnv, dispText);
+        (*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, Lcd_PrintfXY, line, col, (*jniEnv)->NewStringUTF(jniEnv, dispText), attr);
+//        (*jniEnv)->DeleteLocalRef(jniEnv, jstr);
     }
 
     freeDeviceObject();
@@ -532,9 +532,9 @@ void sdkOpenWifi(const char *IPAddress_cString, int port)
     }
 	if(result == 1)
 	{
-		Trace("JNI", "IPAddress_cString: %s\r\n", IPAddress_cString);
+//		Trace("JNI", "IPAddress_cString: %s\r\n", IPAddress_cString);
 		javaString = (*jniEnv)->NewStringUTF(jniEnv, IPAddress_cString);
-		Trace("JNI", "after NewStringUTF pointer: %p\r\n", javaString);
+//		Trace("JNI", "after NewStringUTF pointer: %p\r\n", javaString);
 		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port, (jint)2048);
         (*jniEnv)->DeleteLocalRef(jniEnv, javaString);
 	}

@@ -157,7 +157,7 @@ typedef enum
    ±ê×¼°æº¯Êý Standard Functions
  ********************************************************************************/
 extern SDK_DISP_PIXEL sdkDispGetScreenPixel(void);
-extern s32 sdkDispFillRowRam(s32 siRow, s32 usColid, const u8 *pasStr, u32 ucAtr);
+extern s32 sdkDispFillRowRam(s32 siRow, s32 usColid, u8 *pasStr, u32 ucAtr);
 extern s32 sdkDispAt(s32 siX, s32 siy, const u8 *pasStr);
 extern void sdkDispClearScreen(void);
 extern s32 sdkDispClearRow(s32 siRow);

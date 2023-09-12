@@ -93,6 +93,10 @@
 #define TRANSFLOW_EMVMODE	1
 #define TRANSFLOW_MSDMODE	2
 
+#define EMVB_UIREQ_OUTCOME		0x01
+#define EMVB_UIREQ_RESTART		0x02
+
+
 
 //init for emv malloc & free
 typedef void* (*emvbase_core_malloc)(unsigned int size);
@@ -431,6 +435,12 @@ typedef void (*EMVBASE_ReadTermAID)(EMVBASE_TERMAPP *Applist,unsigned char *Term
 typedef void (*EMVBASE_PrintfFunction)(char *fmt, ...);
 
 
+typedef int (*EMVBase_SetOutcome)(unsigned char Result, unsigned char Start, unsigned char CVM, unsigned char UIRequestonOutcomePresent, unsigned char UIRequestonRestartPresent, unsigned char DataRecordPresent, unsigned char DiscretionaryDataPresent, unsigned char AlternateInterfacePreference, unsigned char Receipt, unsigned char FieldOffRequest, unsigned char *RemovalTimeout, unsigned char OnlineResponseData);
+typedef int (*EMVBase_SetUIRequest)(unsigned char MessageID, unsigned char Status, unsigned char HoldTime, unsigned char *LanguagePerference, unsigned char ValueQualifier, unsigned char *Value, unsigned char *CurrencyCode);
+typedef void (*EMVBase_SendOutcome)();
+typedef void (*EMVBase_SendUIRequest)(int type);
+
+
 typedef struct{
 	EMVBASE_LISTAPPDATA *SelectedApp;
 	EMVBASE_LISTAPPDATA *AppListCandidate;
@@ -448,6 +458,10 @@ typedef struct{
 	unsigned char CheckTag84;//bit0: tag_84 forced exist; bit1: tag_84 check length==14; bit2: tag_84 check data=="2PAY.SYS.DDF01" //sjz20200402 add
 	unsigned char SupportExternSelect;//support 9f29 extern select aid; sjz20200408 add
 	unsigned char PpseRespType;//0-д╛хо; 1-JCB
+	EMVBase_SetOutcome setOutcome;
+	EMVBase_SetUIRequest setUIReq;
+	EMVBase_SendOutcome sendOutcome;
+	EMVBase_SendUIRequest sendUIReq;
 }EMVBase_UnionStruct;
 
 

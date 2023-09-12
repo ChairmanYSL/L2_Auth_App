@@ -9,9 +9,10 @@ s32 sdkKeyOpen(void);
 
 s32 sdkKbWaitKey(u32 uiMask, s32 siMs)
 {
-    u32 timerID;
+    long timerID;
     bool flag = false;
     s32 Key;
+
 
 //    if(gstAutoTest)
 //    {
@@ -28,10 +29,10 @@ s32 sdkKbWaitKey(u32 uiMask, s32 siMs)
 //
     sdkKbKeyFlush();
 
-	sdkTimerStar((u32)siMs);
+	timerID = sdkTimerGetId();
     while(1)
     {
-        if((siMs != 0) && sdkTimerIsEnd() == 1)
+        if((siMs != 0) && sdkTimerIsEnd(timerID, siMs) == 1)
         {
             return SDK_TIME_OUT;
         }
@@ -781,8 +782,10 @@ s32 sdkMmiKeyConver (u8 keyvalue, u8 *newkey, u8 Mode, SDK_KEY_SCANFMT *pScan)
     u8 keytabletter[MULKEYNUM][7]; //fusuipu 2013.08.08 17:55 ��ĸ��ÿ���������7���ַ��͹���
     u8 keytab[MULKEYNUM][SDK_KEY_TAB_MAX_LEN];
     s32 tab_len = 0;
+	long timerID;
 
-	sdkTimerStar(800);
+//	sdkTimerStar(800);
+	timerID = sdkTimerGetId();
     memset(keytabletter, 0, sizeof(keytabletter));
     memset(keytab, 0, sizeof(keytab));  //fusuipu 2013.01.08 14:27
 
@@ -800,7 +803,7 @@ s32 sdkMmiKeyConver (u8 keyvalue, u8 *newkey, u8 Mode, SDK_KEY_SCANFMT *pScan)
     }
 
     if (((key == pScan->ScanMem.MmiLastKey))                                                            //���ϴ��ǰ���ͬһ����
-        && (sdkTimerIsEnd() != 1))
+        && (sdkTimerIsEnd(timerID, 800) != 1))
     {
         tab_len = strlen(keytab[key - 0x31]);
         if(0 == tab_len)
@@ -1658,7 +1661,7 @@ static s32 sdkConverScanf(const u32 overtime, SDK_KEY_SCANFMT *pScan)
     //static SDK_KEY_STROKEHZBUF hzbuffer;        //huangkanghui 2015.02.27 10:48
     u8 key, flag;
     u16 tempflag;
-    u32 timerID;
+    long timerID;
     s32 ret = 0;
 
     //u8 i = 0;
@@ -1670,7 +1673,8 @@ static s32 sdkConverScanf(const u32 overtime, SDK_KEY_SCANFMT *pScan)
         Assert(0);
         return SDK_ERR;
     }
-	sdkTimerStar(800);
+//	sdkTimerStar(800);
+	timerID = sdkTimerGetId();
     //ret = sdkMmiScanfINIT(pScan, &posgroup, &hzbuffer);
     ret = sdkMmiScanfINIT(pScan, NULL, NULL);     //huangkanghui 2015.02.27 10:51
 
@@ -1685,7 +1689,7 @@ static s32 sdkConverScanf(const u32 overtime, SDK_KEY_SCANFMT *pScan)
         key = (u8)sdkKbGetKey(); //huacong 2013.04.07 9:50 ��ʯγ��Ҫ�󽫰���ֵ�޸�ΪUpkey
         //key = Private_sdkGetKeyValue();
 
-        if((sdkTimerIsEnd() == 1) &&
+        if((sdkTimerIsEnd(timerID, 800) == 1) &&
            ((pScan->Mask & SDK_MMI_PWD) == SDK_MMI_PWD) &&
            (pScan->ScanMem.MmiCurrentMode == MODE_BIG_LET || pScan->ScanMem.MmiCurrentMode == MODE_SMA_LET) &&
            (NULL == pScan->sdkMmiDispCallFun)) //fusuipu 2014.04.01 20:59 ����лص���������ʾ��ʽ��ȫ�ɿ����߿���

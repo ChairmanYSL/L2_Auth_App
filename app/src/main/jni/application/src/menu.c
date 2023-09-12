@@ -12,7 +12,7 @@ int Menu0()
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, "PURE L2 TEST", SDK_DISP_DEFAULT);
-    sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.SALE 2.Other Trans", SDK_DISP_LEFT_DEFAULT);
+    sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.SALE 2.CheckSum", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "3.Parameters 4.AutoTest", SDK_DISP_LEFT_DEFAULT);
     sdkDispFillRowRam(SDK_DISP_LINE4, 0, "5.BCTC Param 6.TCP Set", SDK_DISP_LEFT_DEFAULT);
 	sdkDispBrushScreen();
@@ -23,50 +23,62 @@ int Menu0()
 
     while(1)
     {
-//		if(gstAutoTest)
-//		{
-//			rslt = BCTCStartTrade();
-//
-//			if( rslt!= SDK_OK)
-//			{
-//				gstAutoTest = 0;
-//				key = SDK_KEY_ESC;
-//				goto _RETURN;
-//			}
-//			else
-//			{
-//				memset(gstasAmount, 0, sizeof(gstasAmount));
-//				if(gstbctcautotrade.amountexit)	//后台传9F02时用后台的金额
-//				{
-//					sdkBcdToAsc(gstasAmount, gstbctcautotrade.amount, 6);
-//				}
-//				else	//后台没传9F02，默认金额一分钱
-//				{
-//					memcpy(gstasAmount, "000000000001", 12);
-//				}
-//
-//				if(gstbctcautotrade.otheramountexit)	//后台传9F03时用后台的金额
-//				{
-//					memcpy(gbcOtherAmount, gstbctcautotrade.otheramount, 6);
-//				}
-//				else	//后台没传9F03，默认为0
-//				{
-//					memset(gbcOtherAmount, 0, 6);
-//				}
-//
-//				DealTrade();
-//                goto _RETURN;
-//			}
-//		}
+		if(gstAutoTest)
+		{
+			rslt = BCTCStartTrade();
+
+			if( rslt!= SDK_OK)
+			{
+				gstAutoTest = 0;
+				key = SDK_KEY_ESC;
+				goto _RETURN;
+			}
+			else
+			{
+				memset(gstasAmount, 0, sizeof(gstasAmount));
+				if(gstbctcautotrade.amountexist)	//后台传9F02时用后台的金额
+				{
+					sdkBcdToAsc(gstasAmount, gstbctcautotrade.amount, 6);
+				}
+				else	//后台没传9F02，默认金额一分钱
+				{
+					memcpy(gstasAmount, "000000000001", 12);
+				}
+
+				if(gstbctcautotrade.otheramountexist)	//后台传9F03时用后台的金额
+				{
+					memcpy(gbcOtherAmount, gstbctcautotrade.otheramount, 6);
+				}
+				else	//后台没传9F03，默认为0
+				{
+					memset(gbcOtherAmount, 0, 6);
+				}
+				if(gstbctcautotrade.currexpexist)
+				{
+					gTransCurrExponent = gstbctcautotrade.currexp;
+				}
+				else
+				{
+					gTransCurrExponent = 2;
+				}
+
+				rslt = DealTrade();
+				if(SDK_ICC_NOCARD == rslt)
+				{
+					gstAutoTest = 0;
+				}
+                goto _RETURN;
+			}
+		}
 //		else
 //		{
-//			sdkmSleep(1500);
+//			sdkmSleep(100);
 //			rslt = BCTCSingleTrade();
 ////			Trace("BCTC", "finish BCTCSingleTrade\r\n");
 //			if(rslt == SDK_OK)
 //			{
 //				memset(gstasAmount, 0, sizeof(gstasAmount));
-//				if(gstbctcautotrade.amountexit) //后台传9F02时用后台的金额
+//				if(gstbctcautotrade.amountexist) //后台传9F02时用后台的金额
 //				{
 //					sdkBcdToAsc(gstasAmount, gstbctcautotrade.amount, 6);
 //				}
@@ -75,7 +87,7 @@ int Menu0()
 //					memcpy(gstasAmount, "000000000001", 12);
 //				}
 //
-//				if(gstbctcautotrade.otheramountexit)	//后台传9F03时用后台的金额
+//				if(gstbctcautotrade.otheramountexist)	//后台传9F03时用后台的金额
 //				{
 //					memcpy(gbcOtherAmount, gstbctcautotrade.otheramount, 6);
 //				}
@@ -88,16 +100,17 @@ int Menu0()
 //			}
 //			else
 //			{
-//				sdkmSleep(1500);
+//				sdkmSleep(100);
 //			}
 //		}
 
 //		get_time_value(temp);
 //		sdkDispFillRowRam(SDK_DISP_LINE5, 0, temp, SDK_DISP_DEFAULT);
-		sdkmSleep(500);
+		sdkmSleep(200);
         key = sdkKbGetKey();
-        if(key)
+        if(key == SDK_KEY_ESC)
         {
+			gstAutoTest = 0;
             Trace("test", "key=%04X\r\n", key);
         }
 
@@ -152,7 +165,7 @@ int Menu0()
                 goto _RETURN;
 
             case SDK_KEY_2:
-                PostPaywaveOtherMenu();
+                ShowCheckSum();
                 goto _RETURN;
 
 			 case SDK_KEY_3:
@@ -289,7 +302,7 @@ s32 MenuTest()
 	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.Version 2.Add Test AID", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "3.Send TCP 4.Outcome", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE4, 0, "5.APDU 6.Random", SDK_DISP_LEFT_DEFAULT);
-	sdkDispFillRowRam(SDK_DISP_LINE5, 0, "7.SN", SDK_DISP_LEFT_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE5, 0, "7.SN 8.Display", SDK_DISP_LEFT_DEFAULT);
 	sdkDispBrushScreen();
 
 	sdkKbKeyFlush();
@@ -324,6 +337,10 @@ s32 MenuTest()
 
 		case SDK_KEY_7:
 			ReadSNTest();
+			break;
+
+		case SDK_KEY_8:
+			DisplayStringTest();
 			break;
 
 		case SDK_KEY_ENTER:

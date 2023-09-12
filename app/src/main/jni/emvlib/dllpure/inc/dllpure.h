@@ -78,6 +78,7 @@ typedef struct
 	unsigned char PureCandidateListEmptyFlag; //for jcb contactless terminal spec V1.3
 	unsigned char PureCVMParameter;
 	unsigned char CCIDExistInGPO;
+	unsigned char CCIDInGPO;
 	unsigned char PreprcessIndicator;
 	unsigned char CurTransType;
 	unsigned char CurProcessIndicator;
@@ -97,6 +98,7 @@ typedef struct
 	unsigned char FCIDifferFlag;		//1-: 1st select FCI and 2nd select FCI content different
 	unsigned char FCIParseErrorFlag;	//0-:FCI template present and parse correct;1-:FCI parse error;2-:FCI dont be obtained
 	unsigned char SecondTap;
+	unsigned char RequestOnlinePIN;
 }PURETRADEPARAMETER;;
 
 

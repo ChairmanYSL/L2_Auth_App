@@ -1,6 +1,7 @@
 #include "sdkoutcome.h"
 #include "sdktypedef.h"
 #include <string.h>
+#include "sdkDebug.h"
 //#include <stdlib.h>
 
 
@@ -57,6 +58,7 @@ s32 sdkSetOutcomeParam(u8 Result, u8 Start, u8 CVM, u8 UIRequestonOutcomePresent
 	gstOutcome.UIRequestonOutcomePresent = UIRequestonOutcomePresent;
 	gstOutcome.UIRequestonRestartPresent = UIRequestonRestartPresent;
 	gstOutcome.DataRecordPresent = DataRecordPresent;
+	Trace("Outcome", "Set DataRecordPresent: %d\r\n", DataRecordPresent);
 	gstOutcome.DiscretionaryDataPresent = 0;
 	gstOutcome.AlternateInterfacePreference = AlternateInterfacePreference;
 	gstOutcome.Receipt = Receipt;

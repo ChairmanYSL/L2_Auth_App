@@ -651,7 +651,7 @@ s32 sdkTestInputCreditPwd(const u8 *pasTradeAmount, u8 PINTryCount, u8 IccEncryp
     }
 }
 
-void sdkTestIccDispText(u8 const *Text)
+void sdkTestIccDispText(u8 *Text)
 {
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, Text, SDK_DISP_FDISP | SDK_DISP_CDISP | SDK_DISP_INCOL);
@@ -659,7 +659,7 @@ void sdkTestIccDispText(u8 const *Text)
     sdkKbWaitKey(SDK_KEY_MASK_ALL, 10 * 100);
 }
 
-void IccDispText(u8 const *Text)
+void IccDispText(u8 *Text)
 {
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, Text, SDK_DISP_FDISP | SDK_DISP_CDISP | SDK_DISP_INCOL);
@@ -1094,7 +1094,7 @@ s32 IccReadCardCb()
     u8 temp[40] = {0};
     u8 handLen = 0, handData[40] = {0};
     s32 key;
-    u32 timerID;
+    long timerID;
     s32 rslt;
     u32 rftimerID;
     u8 rfstate = 0;
@@ -1106,7 +1106,8 @@ s32 IccReadCardCb()
 	sdkKbWaitKey(SDK_KEY_MASK_ALL, 3000);
     sdkIccOpenRfDev();
 
-	sdkTimerStar(SDK_ICC_TIMER_AUTO * 2);
+//	sdkTimerStar(SDK_ICC_TIMER_AUTO * 2);
+	timerID = sdkTimerGetId();
     while(1)
     {
         rslt = sdkIccResetIcc();
@@ -1145,11 +1146,36 @@ s32 IccReadCardCb()
             return SDK_ESC;
         }
 
-        if(1 == sdkTimerIsEnd())
+        if(1 == sdkTimerIsEnd(timerID, SDK_ICC_TIMER_AUTO * 2))
         {
             return SDK_TIME_OUT;
         }
     }
+}
+
+s32 PureCompareCardNo(u8 *pasPAN)
+{
+	int i;
+	u8 bk_pan[20]={0};
+
+
+	Trace("Trade", "input asPAN = %s\r\n", pasPAN);
+	for(i = 0; i < sizeof(gstbctcblack)/sizeof(gstbctcblack[0]); i++)
+	{
+		if(gstbctcblack[0].panlen != 0)
+		{
+			memset(bk_pan, 0, sizeof(bk_pan));
+			sdkBcdToAsc(bk_pan, gstbctcblack[0].pan, gstbctcblack[0].panlen);
+
+			Trace("Trade", "switch BCTC PAN = %s\r\n", bk_pan);
+			if(strcmp(pasPAN, bk_pan) == 0)
+			{
+				return SDK_ERR;
+			}
+		}
+	}
+
+	return 0;
 }
 
 s32 Badvice(void)
@@ -1180,7 +1206,7 @@ s32 DealTrade(void)
 //	memset(&SimData, 0, sizeof(_SimData));
 //	ReadSimData(&SimData);
 //	gTransCurrExponent = SimData.TransCurrencyExponent;
-	Trace("Trade", "SimData.TransCurrencyExponent = %d\r\n");
+//	Trace("Trade", "SimData.TransCurrencyExponent = %d\r\n");
 _RETRY:
 
 	gstDetecteCardMode = 0;
@@ -1192,6 +1218,11 @@ _RETRY:
 	sdkPureTransInit();
 	sdkPureSetSendOutcome(BCTCSendOutCome);
 	sdkPureSetSendUIRequest(BCTCSendUIRequest);
+	sdPureSetCmpCardNO(PureCompareCardNo);
+	sdkEMVBaseSetSendOutcome(BCTCSendOutCome);
+	sdkEMVBaseSetSendUIRequest(BCTCSendUIRequest);
+	sdkEMVBaseSetOutcome(sdkSetOutcomeParam);
+	sdkEMVBaseSetUIRequest(sdkSetUIRequestParam);
 
 _SECONDTAP:
 	ReadCardDisp();
@@ -1215,17 +1246,17 @@ _SECONDTAP:
 	{
 		sdkIccCloseRfDev();
 		sdkTestIccDispText("Read Card error,Tx Stop");
-		return ret;
+		return SDK_ICC_NOCARD;
 	}
 	else if(SDK_ICC_NOCARD == ret)
 	{
 		sdkIccCloseRfDev();
-		return SDK_OK;
+		return SDK_ICC_NOCARD;
 	}
 	else
 	{
 		sdkIccCloseRfDev();
-		return SDK_ERR;
+		return SDK_ICC_NOCARD;
 	}
 
 
@@ -1261,6 +1292,7 @@ _SECONDTAP:
 
 			case EMV_REQ_GO_ONLINE:
 				ret = SendOnlineBag();
+				Trace("lsy", "SendOnlineBag ret = %d\r\n", ret);
 				if(ret != SDK_OK)
 				{
 					sdkPureImportOnlineResult(SDK_ERR, NULL);
@@ -1275,25 +1307,26 @@ _SECONDTAP:
 				TraceHex("app", "after sdkPureImportOnlineResult 8A", rspcode, 2);
 				break;
 			case EMV_ACCEPTED_ONLINE:
-				BCTCSendTransResult(ret);
+//				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Approve");
 				FlowContinueFlag = 0;
 				break;
 
 			case EMV_DENIALED_ONLINE:
-				BCTCSendTransResult(ret);
+//				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Decline");
 				FlowContinueFlag = 0;
 				break;
 
 			case EMV_ACCEPTED_OFFLINE:
-				BCTCSendTransResult(ret);
+//				BCTCSendTransResult(ret);
+
 				sdkTestIccDispText("Offline Approve");
-				if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == gstOutcome.CVM)
-				{
-					sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Please Sign", SDK_DISP_FDISP | SDK_DISP_CDISP | SDK_DISP_INCOL);
-					sdkDispBrushScreen();
-				}
+//				if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == gstOutcome.CVM)
+//				{
+//					sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Please Sign", SDK_DISP_FDISP | SDK_DISP_CDISP | SDK_DISP_INCOL);
+//					sdkDispBrushScreen();
+//				}
 				FlowContinueFlag = 0;
 				break;
 
@@ -1313,11 +1346,16 @@ _SECONDTAP:
 				sdkIccPowerDown();
 				sdkIccCloseRfDev();
 				sdkTestIccDispText("See Phone");
+				return ret;
 				FlowContinueFlag = 0;
 				break;
 
 			case EMV_STA_TORNRECOVER:
 			case EMV_REQ_READCAARD_AGAIN:
+				sdkDispClearScreen();
+				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Read Card Again", SDK_DISP_FDISP | SDK_DISP_CDISP | SDK_DISP_INCOL);
+				sdkDispBrushScreen();
+				sdkKbWaitKey(SDK_KEY_MASK_ALL, 2 * 100);
 				sdkIccPowerDown();
 				sdkmSleep(1000);
 				goto _RETRY;

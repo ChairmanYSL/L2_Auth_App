@@ -1758,6 +1758,7 @@ s32 PostSpAutotest(void)
         return SDK_ERR;
     }
 
+	gstAutoTest = 1;
     return nRet;
 }
 
@@ -1768,11 +1769,10 @@ typedef struct
 } STR_KEYTALE;
 
 
-void PostPaywaveOtherMenu(void)
+void ShowCheckSum(void)
 {
 	sdkDispClearScreen();
-	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "This feature temp unavailable", SDK_DISP_DEFAULT);
-	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Press Any Key Exit", SDK_DISP_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "CheckSum:  E0145F97", SDK_DISP_DEFAULT);
 	sdkDispBrushScrecen();
 	return sdkKbWaitKey(SDK_KEY_MASK_ALL, 0);
 }
@@ -1883,8 +1883,8 @@ void DelAPPEXAID()
 void InitAPPEXAID()
 {
     memset(appex_aid_list, 0, sizeof(appex_aid_list));
-	Trace("InitAPPEXAID", "sizeof(appex_aid_list) = %d\r\n", sizeof(appex_aid_list));
-	SaveAPPEXAID();
+//	Trace("InitAPPEXAID", "sizeof(appex_aid_list) = %d\r\n", sizeof(appex_aid_list));
+//	SaveAPPEXAID();
 }
 
 void SaveAPPEXAID()
@@ -1892,7 +1892,7 @@ void SaveAPPEXAID()
     s32 ret;
     u8 fn[64] = {0};
 
-	Trace("file", "goto SaveAPPEXAID\r\n");
+//	Trace("file", "goto SaveAPPEXAID\r\n");
     sdkSysGetCurAppDir(fn);
     strcat(fn, "appexaid");
 
@@ -2267,12 +2267,12 @@ void PostSetTCPSetting(void)
 
 	sdkKbKeyFlush();
 	ret = sdkKbGetScanf(0, IPAddress, 12, 12, SDK_MMI_NUMBER, SDK_DISP_LINE3);
-    Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
+//    Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
 
     if(SDK_KEY_ENTER == ret)
     {
         len = IPAddress[0];
-        TraceHex("emv", "input IPAddress:", &IPAddress[1], len);
+//        TraceHex("emv", "input IPAddress:", &IPAddress[1], len);
 
         if(len > 12)
         {
@@ -2287,7 +2287,7 @@ void PostSetTCPSetting(void)
 	{
 		return ;
 	}
-    TraceHex("emv", "input IPAddress:", SimData.IPAddress, len);
+//    TraceHex("emv", "input IPAddress:", SimData.IPAddress, len);
 
     sdkDispClearScreen();
     sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Port", SDK_DISP_DEFAULT);
@@ -2297,12 +2297,12 @@ void PostSetTCPSetting(void)
 	sdkU32ToAsc((u32)SimData.TCPPort, port+1);
 	sdkKbKeyFlush();
 	ret = sdkKbGetScanf(0, port, 4, 5, SDK_MMI_NUMBER, SDK_DISP_LINE3);
-    Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
+//    Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
 
     if(SDK_KEY_ENTER == ret)
     {
         len = port[0];
-        TraceHex("emv", "input port:", &port[1], len);
+//        TraceHex("emv", "input port:", &port[1], len);
 
         if(len > 5)
         {
@@ -2311,11 +2311,11 @@ void PostSetTCPSetting(void)
 		SimData.TCPPort = convertToUnsignedInt(port + 1, len);
 //		SimData.TCPPort = gTCPPort;
     }
-    Trace("emv", "input port: %d", SimData.TCPPort);
+//    Trace("emv", "input port: %d", SimData.TCPPort);
 
 	data_uf = convertToCString(SimData.IPAddress, 16);
 	data_f = formatIPAddress(data_uf);
-	Trace("lishiyao", "before removeLeadingZeros IP:%s\r\n", data_f);
+//	Trace("lishiyao", "before removeLeadingZeros IP:%s\r\n", data_f);
 	removeLeadingZeros(data_f);
 	sdkOpenWifi(data_f, SimData.TCPPort);
 	SaveSimData(&SimData);

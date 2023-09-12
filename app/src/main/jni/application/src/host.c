@@ -1295,6 +1295,7 @@ s32 TlvToTERMINFO(unsigned char *buf, int ilen)
     {
         pb = TlvVPtr(pbTlv);
 		memcpy(SimData.TermCountryCode, pb, 2);
+		TraceHex("BCTC", "Download 9F1A", SimData.TermCountryCode, 2);
     }
 
     pbTlv = TlvSeek(buf, ilen, 0x5F36);
@@ -1359,6 +1360,7 @@ s32 TlvToTERMINFO(unsigned char *buf, int ilen)
         pb = TlvVPtr(pbTlv);
 		memcpy(SimData.TransCurrencyCode, pb, 2);
     }
+	TraceHex("BCTC", "Download 5F2A", SimData.TransCurrencyCode, 2);
 	SaveSimData(&SimData);
 
     return SDK_OK;
@@ -2626,27 +2628,25 @@ s32 BCTCSendICCBase(u8 MsgType)
 
     ComPackRecvLen = BCTCRecvData(ComPackRecv, sizeof(ComPackRecv));
 	Trace("BCTC", "after BCTCRecvData return %d\r\n",ComPackRecvLen);
+	TraceHex("BCTC", "Recv Pack", ComPackRecv, ComPackRecvLen);
 
-    if(len <= 0)
+    if(ComPackRecvLen <= 0)
     {
         return SDK_ERR;
 	}
 
-	if(ComPackRecv[0] != 0x02)
-    {
-        return SDK_ERR;
-    }
-	else if(ComPackRecv[1] != BCTC_TRS_AuthReq_RECV)
-	{
-        return SDK_ERR;
-	}
-	else if(ComPackRecv[1] != BCTC_TRS_FinReq_RECV)
-	{
-        return SDK_ERR;
-	}
+//	if(ComPackRecv[0] != 0x02)
+//    {
+//        return SDK_ERR;
+//    }
+//
+//	if((ComPackRecv[1] != BCTC_TRS_AuthReq_RECV) || (ComPackRecv[1] != BCTC_TRS_FinReq_RECV))
+//	{
+//        return SDK_ERR;
+//	}
 
     TlvLength = ComPackRecv[2] * 256 + ComPackRecv[3];
-	TraceHex("BCTC", "Recv Pack", ComPackRecv, TlvLength+4);
+//	TraceHex("BCTC", "Recv Pack", ComPackRecv, TlvLength+4);
 
     if(TlvLength >= 3)
     {
@@ -2929,10 +2929,9 @@ s32 BCTCProcessAdvice(void)
 
 s32 BCTCSendTransResult(s32 ret)
 {
-    u8 *ComPackSend, *ComPackRecv;
-    s32 ComPackSendLen, ComPackRecvLen, VarReadLen;
+    u8 ComPackSend[512];
+    s32 ComPackSendLen;
     u8 MsgType;
-    u8 *tmp;
     u8 TVR[5] = {0};
     u8 OdaResult = 0;
     s32 len = 0;
@@ -2966,8 +2965,8 @@ s32 BCTCSendTransResult(s32 ret)
 
     MsgType = BCTC_MNG_TransResult_SEND;
 
-    ComPackSend = (u8*)sdkGetMem(BCTC_SEND_LEN);
-    memset(ComPackSend, 0, BCTC_SEND_LEN);
+//    ComPackSend = (u8*)sdkGetMem(BCTC_SEND_LEN);
+//    memset(ComPackSend, 0, BCTC_SEND_LEN);
 
     ComPackSend[0] = MsgType;
 	ComPackSendLen = 1;		//JCB不用上送03交易结果
@@ -2979,13 +2978,13 @@ s32 BCTCSendTransResult(s32 ret)
 	{
 		memcpy(ComPackSend+ComPackSendLen,"\xDF\x31",2);	//脚本结果
 		ComPackSendLen += 2;
-		ComPackSend[ComPackSendLen ++] = len;
+		ComPackSend[ComPackSendLen++] = len;
 		ComPackSendLen += len;
 	}
 
 	memcpy(ComPackSend+ComPackSendLen,"\xDF\xC1\x0B",3); //ODA 结果
 	ComPackSendLen += 3;
-	ComPackSend[ComPackSendLen ++] = 1;
+	ComPackSend[ComPackSendLen++] = 1;
     //jcb OdaResult = ODA not perfor /CDA fail /CDA succes
 	sdkEMVBaseReadTLV("\x95", TVR, &len);
 	if(TVR[0] & 0x80)
@@ -3014,50 +3013,50 @@ s32 BCTCSendTransResult(s32 ret)
 	{
 		OdaResult = 0x07;//CDA success
 	}
-	ComPackSend[ComPackSendLen ++] = OdaResult;
+	ComPackSend[ComPackSendLen++] = OdaResult;
 
 	FormTLVData(icctagarray,ComPackSend+ComPackSendLen,&ComPackSendLen);
 
     if(0 >= BCTCSendData(ComPackSend, ComPackSendLen))
     {
-        sdkFreeMem(ComPackSend);
+//        sdkFreeMem(ComPackSend);
 //        sdkDispClearRowRam(SDK_DISP_LINE5);
 //        sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_ERR, SDK_DISP_DEFAULT);
 //        sdkDispBrushScreen();
 //        sdkKbWaitKey(SDK_KEY_MASK_ALL, 1000);
         return SDK_ERR;
     }
-    sdkFreeMem(ComPackSend);
+//    sdkFreeMem(ComPackSend);
 
-    ComPackRecv = (u8*)sdkGetMem(BCTC_RECV_LEN);
-    memset(ComPackRecv, 0, BCTC_RECV_LEN);
-
-    len = BCTCRecvData(ComPackRecv, BCTC_RECV_LEN);
-
-    if(len <= 0)
-    {
-        sdkFreeMem(ComPackRecv);
-//        sdkDispClearRowRam(SDK_DISP_LINE5);
-//        sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_ERR, SDK_DISP_DEFAULT);
-//        sdkDispBrushScreen();
-//        sdkKbWaitKey(SDK_KEY_MASK_ALL, 1000);
-        return SDK_ERR;
-    }
-    len = ComPackRecvLen;
-
-    if((ComPackRecv[0] != 0x02) || (ComPackRecv[1] != BCTC_MNG_TransResult_RECV))
-    {
-        sdkFreeMem(ComPackRecv);
-//        sdkDispClearRowRam(SDK_DISP_LINE5);
-//        sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_ERR, SDK_DISP_DEFAULT);
-//        sdkDispBrushScreen();
-//        sdkKbWaitKey(SDK_KEY_MASK_ALL, 1000);
-        return SDK_ERR;
-    }
-    Tlvlength = ComPackRecv[2] * 256 + ComPackRecv[3];
-    TraceHex("", "SendConfirm RecvData", ComPackRecv, Tlvlength + 4);
-
-    sdkFreeMem(ComPackRecv);
+//    ComPackRecv = (u8*)sdkGetMem(BCTC_RECV_LEN);
+//    memset(ComPackRecv, 0, BCTC_RECV_LEN);
+//
+//    len = BCTCRecvData(ComPackRecv, BCTC_RECV_LEN);
+//
+//    if(len <= 0)
+//    {
+//        sdkFreeMem(ComPackRecv);
+////        sdkDispClearRowRam(SDK_DISP_LINE5);
+////        sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_ERR, SDK_DISP_DEFAULT);
+////        sdkDispBrushScreen();
+////        sdkKbWaitKey(SDK_KEY_MASK_ALL, 1000);
+//        return SDK_ERR;
+//    }
+//    len = ComPackRecvLen;
+//
+//    if((ComPackRecv[0] != 0x02) || (ComPackRecv[1] != BCTC_MNG_TransResult_RECV))
+//    {
+//        sdkFreeMem(ComPackRecv);
+////        sdkDispClearRowRam(SDK_DISP_LINE5);
+////        sdkDispFillRowRam(SDK_DISP_LINE5, 0, DISP_ERR, SDK_DISP_DEFAULT);
+////        sdkDispBrushScreen();
+////        sdkKbWaitKey(SDK_KEY_MASK_ALL, 1000);
+//        return SDK_ERR;
+//    }
+//    Tlvlength = ComPackRecv[2] * 256 + ComPackRecv[3];
+//    TraceHex("", "SendConfirm RecvData", ComPackRecv, Tlvlength + 4);
+//
+//    sdkFreeMem(ComPackRecv);
     return SDK_OK;
 }
 
@@ -3409,13 +3408,14 @@ s32 BCTCSingleTrade(void)
 
 void BCTCSendDataRecord(void)
 {
-    u8 ComPackSend[256],data[256],aid[16];
+    u8 ComPackSend[512],data[256],aid[16],dataRecord[512-10];
     u16 ComPackSendLen, ComPackRecvLen;
     u8 MsgType,Transtype,ATOLLen;
 	u8 *tag,*ATOL;
-	s32 dataLen=0,i,protolLen,index,tmplen;
+	s32 dataLen=0,i,index,tmplen,pos;
 	s32 j = 0;
-	unsigned char firstByte,secondByte;
+	u8 firstByte,secondByte;
+	u8 high,low;
 
     MsgType = BCTC_MNG_TermDispUI_SEND;
 
@@ -3442,9 +3442,10 @@ void BCTCSendDataRecord(void)
 	Trace("Test", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
 	Trace("Test", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
 
-	memcpy(ComPackSend+ComPackSendLen, "\xFF\x81\x05", 4);
-	ComPackSendLen += 4;
-	index = ComPackSendLen - 1;
+	memcpy(ComPackSend+ComPackSendLen, "\xFF\x81\x05", 3);
+	ComPackSendLen += 3;
+
+	index = ComPackSendLen;
 
 	sdkEMVBaseReadTLV("\x9C", &Transtype, &tmplen);
 	sdkEMVBaseReadTLV("\x9F\x06", aid, &tmplen);
@@ -3476,7 +3477,7 @@ void BCTCSendDataRecord(void)
     }
 
 	j = 0;
-	protolLen = 0;
+	pos = 0;
 
 	Trace("Test", "ATOL Len in Extern AID: %d\r\n", appex_aid_list[i].ATOLLen);
 	TraceHex("Test", "ATOL in Extern AID: ", appex_aid_list[i].ATOL, appex_aid_list[i].ATOLLen);
@@ -3485,48 +3486,85 @@ void BCTCSendDataRecord(void)
 	{
 //		Trace("Test", "Entry while\r\n");
 		firstByte = appex_aid_list[i].ATOL[j];
-//		Trace("Test", "firstByte: %02X\r\n", firstByte);
+		Trace("Test", "firstByte: %02X\r\n", firstByte);
 		if((firstByte & 0x1F) == 0x1F)
 		{
 //			secondByte = appex_aid_list[i].ATOL[j+1];
 //			Trace("Test", "Entry Double byte TAG deal\r\n");
 			tag = (u8 *)sdkGetMem(2);
 			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 2);
-//			TraceHex("Test", "Tag in ATOL", tag, 2);
+			TraceHex("Test", "Tag in ATOL", tag, 2);
 			if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
 			{
-				memcpy(ComPackSend+ComPackSendLen, tag, 2);
-				ComPackSendLen += 2;
-				protolLen += 2;
-				ComPackSend[ComPackSendLen++] = dataLen;
-//				Trace("Test", "data len: %d\r\n", dataLen);
-				protolLen++;
-				memcpy(ComPackSend+ComPackSendLen, data, dataLen);
-//				TraceHex("Test", "data", data, dataLen);
-				ComPackSendLen += dataLen;
-				protolLen += dataLen;
+				memcpy(dataRecord+pos, tag, 2);
+//				Trace("Test", "tag: %02X% 02X\r\n", tag[0], tag[1]);
+				pos += 2;
+
+				if(dataLen <= 127)
+				{
+					dataRecord[pos++] = dataLen;
+				}
+				else if(dataLen > 127 && dataLen <= 255)
+				{
+					dataRecord[pos++] = 0x81;
+					dataRecord[pos++] = dataLen;
+				}
+				else if(dataLen > 255)
+				{
+					dataRecord[pos++] = 0x82;
+					high = (dataLen>>8)&0xFF;
+					low = dataLen&0xFF;
+					dataRecord[pos++] = high;
+					dataRecord[pos++] = low;
+				}
+				Trace("Test", "data len: %d\r\n", dataLen);
+				memcpy(dataRecord+pos, data, dataLen);
+				TraceHex("Test", "data", data, dataLen);
+				pos += dataLen;
+
+				if(!memcmp(tag, "\x9F\x77", 2))
+				{
+					Trace("test", "read 9F77 len = %d\r\n", dataLen);
+					TraceHex("test", "data", data, dataLen);
+				}
 			}
 			sdkFreeMem(tag);
 			j += 2;
 		}
 		else
 		{
-//			Trace("Test", "Entry Single byte TAG deal\r\n");
-			tag = (u8 *)sdkGetMem(1);
-			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 1);
-//			Trace("Test", "Tag in ATOL: %02X\r\n", tag);
-			if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
+////			Trace("Test", "Entry Single byte TAG deal\r\n");
+//			tag = (u8 *)sdkGetMem(1);
+//			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 1);
+			Trace("Test", "Tag in ATOL: %02X\r\n", firstByte);
+			if(sdkEMVBaseReadTLV(&firstByte, data, &dataLen) == SDK_OK)
 			{
-				memcpy(ComPackSend+ComPackSendLen, tag, 1);
-				ComPackSendLen += 1;
-				protolLen += 1;
-				ComPackSend[ComPackSendLen++] = dataLen;
-//				Trace("Test", "data len: %d\r\n", dataLen);
-				protolLen++;
-				memcpy(ComPackSend+ComPackSendLen, data, dataLen);
-//				TraceHex("Test", "data", data, dataLen);
-				ComPackSendLen += dataLen;
-				protolLen += dataLen;
+//				memcpy(dataRecord+pos, firstByte, 1);
+//				pos += 1;
+				dataRecord[pos++]= firstByte;
+
+				if(dataLen <= 127)
+				{
+					dataRecord[pos++] = dataLen;
+				}
+				else if(dataLen > 127 && dataLen <= 255)
+				{
+					dataRecord[pos++] = 0x81;
+					dataRecord[pos++] = dataLen;
+				}
+				else if(dataLen > 255)
+				{
+					dataRecord[pos++] = 0x82;
+					high = (dataLen>>8)&0xFF;
+					low = dataLen&0xFF;
+					dataRecord[pos++] = high;
+					dataRecord[pos++] = low;
+				}
+
+				Trace("Test", "data len: %d\r\n", dataLen);
+				memcpy(dataRecord+pos, data, dataLen);
+				TraceHex("Test", "data", data, dataLen);
+				pos += dataLen;
 			}
 			sdkFreeMem(tag);
 			j += 1;
@@ -3534,7 +3572,32 @@ void BCTCSendDataRecord(void)
 	}
 
 //	Trace("Test", "protolLen: %dd\r\n", protolLen);
-	ComPackSend[index] = protolLen;
+	if(pos <= 127)
+	{
+		ComPackSend[index] = pos;
+		ComPackSendLen++;
+	}
+	else if(pos > 127 && pos <= 255)
+	{
+		ComPackSend[index] = 0x81;
+		ComPackSend[index+1] = pos;
+		ComPackSendLen += 2;
+	}
+	else if(pos > 255)
+	{
+		ComPackSend[index] = 0x82;
+		high = ((pos>> 8) & 0xFF);
+		low = (pos & 0xFF);
+		ComPackSend[index+1] = high;
+		ComPackSend[index+2] = low;
+		Trace("test", "low = %02X\r\n", low);
+		Trace("test", "pos = %d\r\n", pos);
+		ComPackSendLen += 3;
+	}
+	TraceHex("Test", "data record", dataRecord, pos);
+
+	memcpy(ComPackSend+ComPackSendLen, dataRecord, pos);
+	ComPackSendLen += pos;
 
 	BCTCSendData(ComPackSend, ComPackSendLen);
 }
@@ -3600,6 +3663,7 @@ void BCTCSendOutCome(void)
 		flag |= 0x08;
 	}
 	ComPackSend[ComPackSendLen++] =	flag;
+	Trace("BCTC", "Outcome flag = %02X\r\n", flag);
 	ComPackSend[ComPackSendLen++] =	gstOutcome.AlternateInterfacePreference;
 	ComPackSend[ComPackSendLen++] =	gstOutcome.FieldOffRequest;
 	memcpy(ComPackSend+ComPackSendLen, gstOutcome.RemovalTimeout, 2);

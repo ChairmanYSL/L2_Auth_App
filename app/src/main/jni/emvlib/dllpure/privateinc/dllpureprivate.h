@@ -34,7 +34,7 @@ typedef struct
 }SIGN_STAT_APPDATA_RECOVER;
 
 
-#define Algeria_Request 1
+#define Algeria_Request 0
 
 #define CVMR_UNKNOWN             0
 #define CVMR_FAIL                1

@@ -7,6 +7,7 @@
 
 u8 gstemvbaseforL2TEST;		//for L2 test if anything not same as commercial
 u8 gstemvbaseneedsign;
+u8 gstemvbaseneedonlinepin;
 SDK_EMVBASE_CVM_RESULT gstemvbaseCVMresult;
 u8 gAppListCandicateMaxNum = 8;//Ĭ��8��
 
@@ -723,7 +724,12 @@ s32 sdkEMVBaseEntryPointInit()
 	{
 		gstEMVBase_UnionStruct->SupportExternSelect = gstEMVBase_TradeParam->SupportExternSelect;
 		gstEMVBase_UnionStruct->PpseRespType = gstEMVBase_TradeParam->PpseRespType;
+		gstEMVBase_UnionStruct->sendOutcome = gstEMVBase_TradeParam->sendOutcome;
+		gstEMVBase_UnionStruct->setOutcome = gstEMVBase_TradeParam->setOutcome;
+		gstEMVBase_UnionStruct->setUIReq = gstEMVBase_TradeParam->setUIReq;
+		gstEMVBase_UnionStruct->sendUIReq = gstEMVBase_TradeParam->sendUIReq;
 	}
+
 
     return SDK_OK;
 }
@@ -1486,7 +1492,7 @@ s32 sdkEMVBaseLoadAIDList(void)
     strcat(fn, SDK_EMVBASE_AID_FILENALE);
 
 	ret = sdkGetFileSize(fn);
-	Trace("emv", "Get AID File ret = %d\r\n", ret);
+//	Trace("emv", "Get AID File ret = %d\r\n", ret);
 	if(ret == 0 || ret == SDK_FUN_NULL)
 	{
 		sdkEMVBaseCreateAIDFile();
@@ -1698,7 +1704,7 @@ s32 sdkEMVBaseVerifyCAPK(const SDK_EMVBASE_CAPK_STRUCT* capk)
     {
         retcode = SDK_OK;
     }
-    Trace("emv", "sdkEMVBaseVerifyCAPK retcode = %d\r\n", retcode);
+//    Trace("emv", "sdkEMVBaseVerifyCAPK retcode = %d\r\n", retcode);
 
     sdkFreeMem(checkData);
 
@@ -2374,7 +2380,7 @@ s32 sdkEMVBaseLoadCAPKList(void)
     strcat(fn, SDK_EMVBASE_CAPK_FILENALE);
 
 	ret = sdkGetFileSize(fn);
-	Trace("emv", "Get CAPK File ret = %d\r\n", ret);
+//	Trace("emv", "Get CAPK File ret = %d\r\n", ret);
 	if(ret == 0 || ret == SDK_FUN_NULL)
 	{
 		sdkEMVBaseCreateCAPKFile();
@@ -2882,9 +2888,9 @@ void EMVBase_TransTermData_Init(void)
 	emvbase_avl_createsettagvalue(EMVTAG_TVR, "\x00\x00\x00\x00\x00", 5);
 	emvbase_avl_createsettagvalue(EMVTAG_TSI, "\x00\x00", 2);
 	emvbase_avl_createsettagvalue(EMVTAG_AppVerNum, "\x00\x30", 2);
-	emvbase_avl_createsettagvalue(EMVTAG_CountryCode, "\x01\x56", 2);
-	emvbase_avl_createsettagvalue(EMVTAG_TransCurcyCode, "\x01\x56", 2);
-	emvbase_avl_createsettagvalue(EMVTAG_TransReferCurcyCode, "\x01\x56", 2);
+	emvbase_avl_createsettagvalue(EMVTAG_CountryCode, "\x09\x78", 2);
+	emvbase_avl_createsettagvalue(EMVTAG_TransCurcyCode, "\x09\x78", 2);
+	emvbase_avl_createsettagvalue(EMVTAG_TransReferCurcyCode, "\x09\x78", 2);
 	emvbase_avl_settag(EMVTAG_TransReferCurcyExp, 0x02);
 	emvbase_avl_settag(EMVTAG_TransCurcyExp, 0x02);
 	emvbase_avl_createsettagvalue(EMVTAG_AcquireID, "\x00\x00\x00\x00\x00\x01", 6);
@@ -2908,6 +2914,7 @@ void EMVBase_TransTermData_Init(void)
 s32 sdkEMVBaseTransInit()
 {
 	gstemvbaseneedsign = 0;
+	gstemvbaseneedonlinepin = 0;
 	gstemvbaseCVMresult=SDKEMVBASE_CVM_NA;
 	emvbase_avl_createtree();
 	EMVBase_TransTermData_Init();
@@ -3340,6 +3347,26 @@ s32 sdkEMVBaseSetInputPINFun(s32(*fun_inputpin)(u8 ucIccEncryptWay, u8 ucPINTryC
 	return SDK_ERR;
 }
 
+s32 sdkEMVBaseSetOutcome(s32(*func_pointer)(u8 Result, u8 Start, u8 CVM, u8 UIRequestonOutcomePresent, u8 UIRequestonRestartPresent, u8 DataRecordPresent, u8 DiscretionaryDataPresent, u8 AlternateInterfacePreference, u8 Receipt, u8 FieldOffRequest, u8 *RemovalTimeout, u8 OnlineResponseData))
+{
+	if(gstEMVBase_TradeParam)
+	{
+		gstEMVBase_TradeParam->setOutcome = func_pointer;
+		return SDK_OK;
+	}
+	return SDK_ERR;
+}
+
+s32 sdkEMVBaseSetUIRequest(s32(*func_pointer)(unsigned char MessageID, unsigned char Status, unsigned char HoldTime, unsigned char *LanguagePerference, unsigned char ValueQualifier, unsigned char *Value, unsigned char *CurrencyCode))
+{
+	if(gstEMVBase_TradeParam)
+	{
+		gstEMVBase_TradeParam->setUIReq = func_pointer;
+		return SDK_OK;
+	}
+	return SDK_ERR;
+}
+
 s32 sdkEMVBaseSetSpTermCheck(bool enable)
 {
     u8 SupportTermCheck = enable;
@@ -3384,6 +3411,11 @@ s32 sdkEMVBaseGetScriptResult(s32 * psiScriptResultLen, u8 * pheScriptResult)
 bool sdkEMVBaseNeedSignature()
 {
 	return gstemvbaseneedsign;
+}
+
+bool sdkEMVBaseNeedOnlinePIN()
+{
+	return gstemvbaseneedonlinepin;
 }
 
 SDK_EMVBASE_CVM_RESULT sdkEMVBaseGetCVMresult(void)
@@ -3794,5 +3826,27 @@ s32 sdkEmvBaseGetLibVersion(u8 *version)
 
 	EMVBase_GetLibVersion(version);
 	return SDK_OK;
+}
+
+s32 sdkEMVBaseSetSendOutcome(void (*fun_pointer)())
+{
+	if(gstEMVBase_TradeParam)
+	{
+		gstEMVBase_TradeParam->sendOutcome = fun_pointer;
+		return SDK_OK;
+	}
+
+	return SDK_ERR;
+}
+
+s32 sdkEMVBaseSetSendUIRequest(void (*fun_pointer)(int type))
+{
+	if(gstEMVBase_TradeParam)
+	{
+		gstEMVBase_TradeParam->sendUIReq = fun_pointer;
+		return SDK_OK;
+	}
+
+	return SDK_ERR;
 }
 

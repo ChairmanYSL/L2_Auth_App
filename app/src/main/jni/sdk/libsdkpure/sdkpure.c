@@ -90,6 +90,8 @@ int sdkPureSetInputPINRes(int res, unsigned char *pinBuf, int bufLen)
 		return SDK_PARA_ERR;
 	}
 
+	Trace("test", "sdkPureSetInputPINRes input bufLen: %d\r\n", bufLen);
+
 	InputPINRes = res;
 	ret = sdkEMVBaseConfigTLV(EMVTAG_PIN, pinBuf, bufLen);
 	if(ret == SDK_OK)
@@ -217,6 +219,19 @@ s32 sdkPureSetTermAIDSupport(u8 *TermAIDSup, s32 len)
 
 	return sdkEMVBaseConfigTLV("\xDF\x7F", TermAIDSup, len);
 }
+
+s32 sdPureSetCmpCardNO(s32 (*CheckCardNo)(const u8 *pasPAN))
+{
+	if(gstPureTradeParam == NULL || gstPureTradeUnionStruct == NULL)
+	{
+		return SDK_PARA_ERR;
+	}
+
+	gstPureTradeUnionStruct->VerifyCardNo = CheckCardNo;
+
+	return SDK_OK;
+}
+
 
 s32 sdkPureGetCTPreProcessIndicator(u8 *indicator)
 {
@@ -689,21 +704,21 @@ static void sdkPureIccIsoCommand(EMVBASE_APDU_SEND * ApduSend, EMVBASE_APDU_RESP
     sdkEMVBase_ContactlessIsoCommand(ApduSend, apdu_r);
 }
 
-static unsigned char sdkPureVerifyCardNo(unsigned char *asPAN)
-{
-	s32 ret = -3;
-	if(gstsdkPureTradeTable->VerifyCardNo)
-	{
-		ret = gstsdkPureTradeTable->VerifyCardNo(asPAN);
-		Trace("emv", "VerifyCardNo ret = %d\r\n", ret);
-		if(ret != SDK_OK)
-		{
-			return RLT_EMV_ERR;
-		}
-	}
-
-	return RLT_EMV_OK;
-}
+//static unsigned char sdkPureVerifyCardNo(unsigned char *asPAN)
+//{
+//	s32 ret = -3;
+//	if(gstsdkPureTradeTable->VerifyCardNo)
+//	{
+//		ret = gstsdkPureTradeTable->VerifyCardNo(asPAN);
+//		Trace("emv", "VerifyCardNo ret = %d\r\n", ret);
+//		if(ret != SDK_OK)
+//		{
+//			return RLT_EMV_ERR;
+//		}
+//	}
+//
+//	return RLT_EMV_OK;
+//}
 
 static unsigned char sdkPureCheckCAPK(PURETRADEPARAMETER *EMVTradeParam)
 {
@@ -755,7 +770,7 @@ void sdkPureTransTermDataInit(void)
     gstPureTradeUnionStruct->EMVB_RandomNum = sdkPureGetRandom;
     gstPureTradeUnionStruct->CheckMatchTermAID = sdkEMVBase_CheckMatchTermAID_CL;
     gstPureTradeUnionStruct->ReadTermAID = sdkEMVBase_ReadTermAID_CL;
-	gstPureTradeUnionStruct->VerifyCardNo = sdkPureVerifyCardNo;
+//	gstPureTradeUnionStruct->VerifyCardNo = sdkPureVerifyCardNo;
 	gstPureTradeUnionStruct->CheckCapkExist = sdkPureCheckCAPK;
 	gstPureTradeUnionStruct->GetInputPINRes = sdkPureGetInputPINRes;
 	gstPureTradeUnionStruct->GetVerifyCardNoRes = sdkPureGetVerifyCardNoRes;
@@ -851,6 +866,19 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 	{
 		if(sdkEMVBaseCheckTagExit("\x8A"))
 		{
+			if(gstPureTradeParam->CurProcessIndicator == TRANS_ONLINE_RESPONSE)
+			{
+				unsigned char respCode[2];
+				sdkEMVBaseReadTLV("\x8A", respCode, &len);
+				if(!memcmp(respCode, "\x30\x30", 2))
+				{
+					return SDK_EMV_TransOnlineApprove;
+				}
+				else if(!memcmp(respCode, "\x30\x35", 2))
+				{
+					return SDK_EMV_TransOnlineDecline;
+				}
+			}
 			ErrorType = 2;
 			if(!sdkEMVBaseCheckTagExit("\x9F\x02") || !sdkEMVBaseCheckTagExit("\x5F\x2A") || !sdkEMVBaseCheckTagExit("\x9F\x37"))
 			{
@@ -1374,6 +1402,25 @@ s32 sdkPureKernelDeactivate(const SDK_PURE_TRADE_PARAM * pstTradeParam)
     return rlt;
 }
 
+s32 sdkPureTransProcess(const SDK_PURE_TRADE_PARAM * pstTradeParam)
+{
+    u8 retCode = RLT_EMV_ERR;
+    s32 rlt = SDK_ERR;
+
+    if((NULL == pstTradeParam) || (gstPureTradeUnionStruct == NULL) || (gstPureTradeParam == NULL))
+    {
+        return SDK_PARA_ERR;
+    }
+
+    retCode = pure_TransProcessWithNoOutcome(gstPureTradeUnionStruct);
+
+    Trace("emv", "pure_TransProcess retCode = %02d\r\n", retCode);
+    emvbase_avl_printtagallvalue("after pure_TransProcessWithNoOutcome TVR",EMVTAG_TVR);
+    sdkEMVBaseRltToSdkRlt(retCode, &rlt);
+	Trace("emv", "sdkPureKernelDeactivate ret = %02d\r\n", rlt);
+    return rlt;
+}
+
 s32 sdkPureCardHolderVerf(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 {
     u8 retCode = RLT_EMV_ERR, k;
@@ -1396,6 +1443,12 @@ s32 sdkPureCardHolderVerf(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 	{
 		gstemvbaseneedsign = 1;
 	}
+
+	if(gstPureTradeUnionStruct->EMVTradeParam->RequestOnlinePIN)
+	{
+		gstemvbaseneedonlinepin = 1;
+	}
+
     sdkEMVBaseRltToSdkRlt(retCode, &rlt);
 	Trace("emv", "sdkPureCardHolderVerf ret = %02d\r\n", rlt);
     return rlt;
@@ -1625,7 +1678,7 @@ s32 sdkPureReadBalanceAfterGAC(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 	retCode = pure_RetrieveCardBalance(gstPureTradeUnionStruct);
 
     sdkEMVBaseRltToSdkRlt(retCode, &rlt);
-	Trace("emv", "sdkPureCardHolderVerf ret = %02d\r\n", rlt);
+	Trace("emv", "sdkPureReadBalanceAfterGAC ret = %02d\r\n", rlt);
     return rlt;
 }
 
@@ -1932,6 +1985,8 @@ s32 sdkPureTransFlow()
     s32 ret;
     SDK_EMVBASE_CL_HIGHESTAID tempHighestAID;
 	static u8 callbackFlag = 0;
+	u8 KernelCap[5];
+	s32 len;
 
 	if(gPureTransStuatus == SDK_PURE_STATUS_PPSE)
 	{
@@ -2283,7 +2338,7 @@ _DEALAFTERECHO:
 			{
 				return EMV_REQ_CONFIRM_FORCE_ONLINE;
 			}
-			else if(SDK_EMV_ReadCardAgain == ret)
+			else if(SDK_EMV_ReadCardAgain == ret || SDK_EMV_TransTryAgain == ret)
 			{
 				gPureTransStuatus = SDK_PURE_STATUS_PPSE;
 				return EMV_REQ_READCAARD_AGAIN;
@@ -2375,6 +2430,46 @@ _DEALAFTERECHO:
 			}
 		case SDK_PURE_STATUS_KERNEL_DEACTIVATE:
 			ret = sdkPureKernelDeactivate(gstsdkPureTradeTable);
+			if(SDK_EMV_TransOnlineWait == ret)
+			{
+				if(gstPureTradeParam->RequestOnlinePIN)
+				{
+					gPureTransStuatus = SDK_PURE_STATUS_TRANSPROCESS;
+					return EMV_REQ_ONLINE_PIN;
+				}
+				gPureTransStuatus = SDK_PURE_STATUS_GPO;
+				gstPureTradeParam->CurProcessIndicator = TRANS_ONLINE_RESPONSE;
+				if(gstPureTradeParam->SecondTap)
+				{
+					gPureTransStuatus = SDK_PURE_STATUS_SELECTAID;
+					return EMV_REQ_SECONDTAP;
+				}
+
+				return EMV_REQ_GO_ONLINE;
+			}
+			else if(SDK_EMV_TransOfflineApprove == ret)
+			{
+				return EMV_ACCEPTED_OFFLINE;
+			}
+			else if(SDK_EMV_TransOfflineDecline == ret)
+			{
+				return EMV_DENIALED_OFFLINE;
+			}
+			else if(SDK_EMV_TransTerminate == ret)
+			{
+				return EMV_REQ_GO_ONLINE;
+			}
+			else if(SDK_EMV_SwitchInterface == ret)
+			{
+				return EMV_SWITCH_INTERFACE;
+			}
+			else if(SDK_EMV_ReadCardAgain == ret)	//2nd tap card
+			{
+				return EMV_REQ_READCAARD_AGAIN;
+			}
+
+		case SDK_PURE_STATUS_TRANSPROCESS:
+			ret = sdkPureTransProcess(gstsdkPureTradeTable);
 			if(SDK_EMV_TransOnlineWait == ret)
 			{
 				gPureTransStuatus = SDK_PURE_STATUS_GPO;

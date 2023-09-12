@@ -2,6 +2,7 @@
 #include "dllemvbasedebug.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include "sdkoutcome.h"
 
 EMVBase_LogOutput *gstemvbaselogoutput = NULL;
 
@@ -1126,6 +1127,22 @@ unsigned char EMVBase_ReadSelectRetData_Jcb(EMVBASE_SELECT_RET* selectRet, unsig
     return RLT_EMV_OK;
 }
 
+void EMVBase_EndApplication_R7_2(EMVBase_UnionStruct *tempAppUnionStruct)
+{
+	tempAppUnionStruct->setOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+	tempAppUnionStruct->sendOutcome();
+}
+
+void EMVBase_EndApplication_R7_3(EMVBase_UnionStruct *tempAppUnionStruct)
+{
+	tempAppUnionStruct->setOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+	tempAppUnionStruct->sendOutcome();
+	sdkmSleep(100);
+
+	tempAppUnionStruct->setUIReq(SDK_UI_MSGID_ERROR_TRYOTHERCARD, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+	tempAppUnionStruct->sendUIReq(EMVB_UIREQ_OUTCOME);
+}
+
 
 unsigned char EMVBase_SelectDFRetData(EMVBASE_APDU_RESP *apdu_r, EMVBase_UnionStruct *tempAppUnionStruct)
 {
@@ -1179,14 +1196,27 @@ unsigned char EMVBase_SelectDFRetData(EMVBASE_APDU_RESP *apdu_r, EMVBase_UnionSt
     }
     else if(apdu_r->SW1 == 0x6A && apdu_r->SW2 == 0x81)
     {
+		EMVBase_EndApplication_R7_2(tempAppUnionStruct);
         return RLT_ERR_EMV_CardBlock;
     }
 	else if(apdu_r->SW1 == 0x6A && apdu_r->SW2 == 0x82)
 	{
+		EMVBase_EndApplication_R7_2(tempAppUnionStruct);
 		return RLT_EMV_PPSE_REV_6A82;
+	}
+	else if(apdu_r->SW1 == 0x62 && apdu_r->SW2 == 0x83)
+	{
+		EMVBase_EndApplication_R7_2(tempAppUnionStruct);
+		return RLT_ERR_EMV_IccCommand;
+	}
+	else if(apdu_r->SW1 == 0x6A && apdu_r->SW2 == 0x86)
+	{
+		EMVBase_EndApplication_R7_2(tempAppUnionStruct);
+		return RLT_ERR_EMV_IccCommand;
 	}
     else
     {
+		EMVBase_EndApplication_R7_3(tempAppUnionStruct);
         return RLT_ERR_EMV_IccReturn;
     }
 }
@@ -1222,6 +1252,10 @@ unsigned char EMVBase_SelectPPSE(EMVBase_UnionStruct *tempEMVBase_UnionStruct)
 	}
 
     retCode = EMVBase_SelectDFRetData(&apdu_r, tempEMVBase_UnionStruct);
+	if(RLT_ERR_EMV_IccDataFormat == retCode || RLT_EMV_TERMINATE_TRANSERR  == retCode)
+	{
+		EMVBase_EndApplication_R7_3(tempEMVBase_UnionStruct);
+	}
 
     return retCode;
 }

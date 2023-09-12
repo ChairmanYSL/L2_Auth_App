@@ -47,7 +47,7 @@ typedef struct
 
 u8 GetBatchCapture();
 bool IsEcTrade();
-void sdkTestIccDispText(u8 const *Text);
+void sdkTestIccDispText(u8        *Text);
 
 typedef struct
 {
@@ -87,7 +87,7 @@ extern s32 ReadCardDisp();
 extern s32 IccReadCard();
 extern s32 AppqPBOCPreTrans();
 extern u8 OnlineEncPIN(u8 *pCreditPwd);
-void IccDispText(u8 const *Text);
+void IccDispText(u8     *Text);
 
 extern u8 	EMVB_ZipPagData(u8 TradeType,u8 *DOLData,u32 *DataLen,u8 TradeOkButDecline,u8 SrciptResult,u8 usedtype);
 extern void sdkSendUIRequestWhenMoreCard(u8 MassafeId, u8 stauts);

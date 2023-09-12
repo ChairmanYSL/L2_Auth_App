@@ -188,9 +188,9 @@ void sdkDispClearScreen()
 {
 	clearLcdLine(0, 4);
 }
-int sdkDispFillRowRam(int siRow, int siColid, const unsigned char *pasStr, unsigned int ucAtr){
+int sdkDispFillRowRam(int siRow, int siColid, unsigned char *pasStr, unsigned int ucAtr){
 
-    dispLcdLine(siRow, siColid, pasStr, ucAtr);
+    dispLcdLine(siRow, siColid, (char *)pasStr, ucAtr);
     return SDK_OK;
 }
 void sdkDispBrushScreen(void)
@@ -339,10 +339,10 @@ void AddTestCardAID(void)
 //	memcpy(extempAid.terminalcapability, appex_aid_list[0].terminalcapability, 3);
 //	extempAid.terminaltype = appex_aid_list[0].terminaltype;
 	memcpy(extempAid.RemovalTimeout, appex_aid_list[0].RemovalTimeout, 2);
-	extempAid.Implementation = 0x2C;
+	extempAid.Implementation = 0x26;
 	extempAid.ZeroAmtAllowFlag = appex_aid_list[0].ZeroAmtAllowFlag;
 	extempAid.StatusCheckFlag = appex_aid_list[0].StatusCheckFlag;
-	memcpy(extempAid.CLAppCap, "\x36\x00\x00\x02\xE9", 5);
+	memcpy(extempAid.CLAppCap, "\x36\x00\x40\x03\xF9", 5);
 	memcpy(extempAid.ATOL, appex_aid_list[0].ATOL, 64);
 	extempAid.ATOLLen = appex_aid_list[0].ATOLLen;
 	memcpy(extempAid.MTOL, "\x8C\x00\x00\x57\x00\x00", 64);
@@ -722,10 +722,16 @@ void APDUTest(void)
 void RandNumTest(void)
 {
 	u8 randnum[4]={0};
-	int ret=8751;
+	int ret=0,i;
 
 	ret = sdkGetRandom(randnum, 4);
 	Trace("test", "sdkGetRandom ret = %d\r\n", ret);
+
+	for(i = 0;i < 500;i++)
+	{
+		sdkGetRandom(randnum, 4);
+		serial_send(gSerialPortId, randnum, 4);
+	}
 }
 
 void ReadSNTest(void)
@@ -738,6 +744,24 @@ void ReadSNTest(void)
 	Trace("test", "ddi_manage_get_sn ret = %d\r\n", ret);
 	Trace("test", "SN Len = %d\r\n", outlen);
 //	TraceHex("test", "SN", pasDest, outlen);
+}
+
+void DisplayStringTest(void)
+{
+	int i;
+
+	for(i = 0; i < 1000; i++)
+	{
+		sdkTestIccDispText("Multi Card Collision");
+		sdkTestIccDispText("Read Card error,Tx Stop");
+		sdkTestIccDispText("Online Approve");
+		sdkTestIccDispText("Online Decline");
+		sdkTestIccDispText("Offline Approve");
+		sdkTestIccDispText("Offline Decline");
+		sdkTestIccDispText("Switch Interface");
+		sdkTestIccDispText("See Phone");
+		sdkTestIccDispText("End Application");
+	}
 }
 
 int sdkSysSetCurAppDir(unsigned char *pasDir, int len)
@@ -818,7 +842,7 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, u1
 	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, psiOutLen);
 	timerid2 = sdkTimerGetId();
 
-	if(timerid != 0 && (timerid + 3000 < timerid2))
+	if(timerid != 0 && (timerid2 - timerid > 5000))
 	{
 		rslt = DetecteOther();
 		Trace("lishiyao", "DetecteOther ret = %d\r\n", rslt);
