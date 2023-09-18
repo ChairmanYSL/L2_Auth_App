@@ -536,7 +536,7 @@ void sdkOpenWifi(const char *IPAddress_cString, int port)
 		javaString = (*jniEnv)->NewStringUTF(jniEnv, IPAddress_cString);
 //		Trace("JNI", "after NewStringUTF pointer: %p\r\n", javaString);
 		(*jniEnv)->CallVoidMethod(jniEnv, mDeviceOpera, OpenWifi, javaString, (jint)port, (jint)2048);
-        (*jniEnv)->DeleteLocalRef(jniEnv, javaString);
+//        (*jniEnv)->DeleteLocalRef(jniEnv, javaString);
 	}
 	freeDeviceObject();
 }
@@ -686,5 +686,45 @@ void freeDeviceObject(){
 //    testCallJava = NULL;
 
 }
+
+//JNIEXPORT void JNICALLJava_com_trendit_demo_JavaNative_iccTest(JNIEnv *env, jobject thiz)
+//{
+//    uint8_t buf[6] = {0};
+//
+//    int ret = ddi_icc_open(0x00);
+//    if(ret != STATUS_CODE_SUCCESS)
+//    {
+//        app_sys_error("icc open err ret = %d", ret);
+//        return;
+//    }
+//    app_sys_debug("enter to search rf card process");
+//    while (1)
+//    {
+//        ret = ddi_icc_read_card_status(0x00, buf);
+//        if(ret != STATUS_CODE_SUCCESS)
+//        {
+//            app_sys_error("read card status err ret = %d", ret);
+//            break;
+//        }
+//        if(buf[1] == 0x01)
+//        {
+//            uint8_t atr[99] = {0};
+//            uint8_t atr_len = sizeof(atr);
+//            uint8_t card_type = 0;
+//            uint8_t recv_apdu[128] = {0};
+//            uint16_t recv_apdu_len = sizeof(recv_apdu);
+//
+//            ret = ddi_icc_power_on(0x00, 0x01, atr, &atr_len, &card_type);
+//            app_sys_debug("power on ret = %d", ret);
+//            app_sys_dump("atr = ", atr, atr_len);
+//            ddi_icc_trans_apdu(0x00, "\x00\xA4\x04\x00\x0E\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31\x00", 20, recv_apdu, &recv_apdu_len);
+//            app_sys_dump("recv apdu = ", recv_apdu, recv_apdu_len);
+//            ddi_icc_power_off(0x00);
+//            break;
+//        }
+//        usleep(20 * 1000);
+//    }
+//    ddi_icc_close(0x00);
+//}
 
 

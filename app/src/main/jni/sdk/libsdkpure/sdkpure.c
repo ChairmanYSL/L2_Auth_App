@@ -377,6 +377,7 @@ s32 sdkPureSetSendOutcome(void (*fun_pointer)())
 	}
 
 	gstPureTradeUnionStruct->SendOutcome = fun_pointer;
+	Trace("app","gstPureTradeUnionStruct->SendOutcome = %p\r\n",gstPureTradeUnionStruct->SendOutcome);
 	return SDK_OK;
 }
 
@@ -388,6 +389,7 @@ s32 sdkPureSetSendUIRequest(void (*fun_pointer)(int type))
 	}
 
 	gstPureTradeUnionStruct->SendUIRequest = fun_pointer;
+	Trace("app","gstPureTradeUnionStruct->SendUIRequest = %p\r\n",gstPureTradeUnionStruct->SendUIRequest);
 	return SDK_OK;
 }
 
@@ -777,8 +779,8 @@ void sdkPureTransTermDataInit(void)
 	gstPureTradeUnionStruct->GetVerifyRevocationKeyRes = sdkPureGetVerifyRevocationKeyRes;
 	gstPureTradeUnionStruct->SetOutcome = sdkSetOutcomeParam;
 	gstPureTradeUnionStruct->SetUIRequest = sdkSetUIRequestParam;
-	gstPureTradeUnionStruct->SendOutcome = sdkSendOutcome;
-	gstPureTradeUnionStruct->SendUIRequest = sdkSendUIRequest;
+//	gstPureTradeUnionStruct->SendOutcome = sdkSendOutcome;
+//	gstPureTradeUnionStruct->SendUIRequest = sdkSendUIRequest;
 	gstPureTradeUnionStruct->GetTransAmtSumRes = sdkPureGetTransAmtSumRes;
 	gstPureTradeUnionStruct->Preprocess = sdkPurePreprocess;
 	gstPureTradeUnionStruct->CheckRestrictAID = sdkPureCheckRestrictAID;
@@ -1425,7 +1427,6 @@ s32 sdkPureCardHolderVerf(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 {
     u8 retCode = RLT_EMV_ERR, k;
     s32 rlt = SDK_ERR;
-	unsigned char IUParameter;
 
     if((NULL == pstTradeParam) || (gstPureTradeUnionStruct == NULL) || (gstPureTradeParam == NULL))
     {
@@ -1434,6 +1435,8 @@ s32 sdkPureCardHolderVerf(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 
     retCode = pure_CardHolderVerf(gstPureTradeUnionStruct);
     Trace("emv", "pure_CardHolderVerf retCode = %02d\r\n", retCode);
+
+	EMVBase_Trace("after pure_CardHolderVerf CVM = %02X\r\n", gstPureTradeUnionStruct->EMVTradeParam->PureCVMParameter);
 	if(retCode == PURE_REQ_INPUTPIN)
 	{
 		return EMV_REQ_ONLINE_PIN;
@@ -1517,6 +1520,14 @@ SDK_EMVBASE_CVM_RESULT sdkPureGetCVMresult()
 void sdkPureSetCandidateListEmptyFlag(bool flag)
 {
 	gstPureTradeUnionStruct->EMVTradeParam->PureCandidateListEmptyFlag = flag;
+}
+
+void sdkPureSetReSelectApp(bool flag)
+{
+	if(flag)
+	{
+		gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
+	}
 }
 
 bool sdkPureNeedIssuerUpdate()
@@ -1676,6 +1687,7 @@ s32 sdkPureReadBalanceAfterGAC(const SDK_PURE_TRADE_PARAM * pstTradeParam)
     }
 
 	retCode = pure_RetrieveCardBalance(gstPureTradeUnionStruct);
+	EMVBase_Trace("after pure_RetrieveCardBalance CVM = %02X\r\n", gstPureTradeUnionStruct->EMVTradeParam->PureCVMParameter);
 
     sdkEMVBaseRltToSdkRlt(retCode, &rlt);
 	Trace("emv", "sdkPureReadBalanceAfterGAC ret = %02d\r\n", rlt);
@@ -2038,26 +2050,6 @@ s32 sdkPureTransFlow()
 			gPureTransStuatus = SDK_PURE_STATUS_SELECTAID;
 			return EMV_STA_IDLE;
 
-		case SDK_PURE_STATUS_RESELECTAID:
-			sdkEMVBaseTransInit();
-			sdkPureTransInit();
-
-			sdkEMVBaseCreateUnpredictNum();
-			memset(&tempHighestAID, 0, sizeof(SDK_EMVBASE_CL_HIGHESTAID));
-			ret = sdkEMVBaseReSelectApp(&tempHighestAID);
-			Trace("emv", "sdkEMVBaseReSelectApp ret = %d\r\n", ret);
-			if(ret != SDK_OK)
-			{
-				sdkPureSetCandidateListEmptyFlag(1);
-				pure_Outcome_EndApplication_EmptyCandidateList(gstPureTradeUnionStruct);
-				return EMV_ENDAPPLICATION;
-			}
-			else
-			{
-				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
-				return EMV_REQ_SEL_CANDIDATES_AGAIN;
-			}
-
 		case SDK_PURE_STATUS_SELECTAID:
 			ret = sdkPureFinalSelectedApp(gstsdkPureTradeTable);
 			if(SDK_OK == ret)
@@ -2076,7 +2068,7 @@ s32 sdkPureTransFlow()
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)
@@ -2127,7 +2119,7 @@ s32 sdkPureTransFlow()
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)
@@ -2230,7 +2222,7 @@ s32 sdkPureTransFlow()
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 			else if(SDK_EMV_SwitchInterface  == ret)
@@ -2263,7 +2255,7 @@ s32 sdkPureTransFlow()
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 
@@ -2288,7 +2280,7 @@ s32 sdkPureTransFlow()
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)
@@ -2350,7 +2342,7 @@ _DEALAFTERECHO:
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)
@@ -2406,7 +2398,7 @@ _DEALAFTERECHO:
 			}
 			else if(SDK_EMV_AppSelectTryAgain == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_RESELECTAID;
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
 				return EMV_REQ_SELECT_NEXT;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)

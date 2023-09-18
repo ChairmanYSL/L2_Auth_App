@@ -539,9 +539,47 @@ unsigned short sdkReadPosSn(unsigned char *pasDest)
     return outlen;
 }
 
-
-
+#define SLOT_IC_CARD 0x00
 #define SLOT_RF_CARD 0x04
+
+s32 sdkIccOpenIcDev(void)
+{
+	return ddi_icc_open(SLOT_IC_CARD);
+}
+
+s32 sdkIccGetCardStatus(s32 siTimerCnt)
+{
+    s32 rslt;
+    long TimerID;
+	u8 buf[6] = {0};
+
+    if(siTimerCnt < 0)
+    {
+        return SDK_PARA_ERR;
+    }
+    TimerID = sdkTimerGetId();
+
+    while(1)
+    {
+        rslt = ddi_icc_read_card_status(SLOT_IC_CARD, buf);
+
+        if(buf[1] == 0x01)
+        {
+            return SDK_OK;
+        }
+
+        if( 0 == siTimerCnt || sdkTimerIsEnd(TimerID, siTimerCnt))
+        {
+            return SDK_ICC_NOCARD;
+        }
+    }
+}
+
+s32 sdkIccCloseIcDev(void)
+{
+	ddi_icc_power_off(SLOT_IC_CARD);
+	return ddi_icc_close(SLOT_IC_CARD);
+}
 
 int sdkIccOpenRfDev()
 {
@@ -552,58 +590,46 @@ int sdkIccPowerOnAndSeek()
 {
 	u8 buf[6];
 	int ret,rslt,key;
-    u32 timeoutvalue;
-	long timerid;
 
-    timeoutvalue = 5 * 1000;
-	timerid = sdkTimerGetId();
-//	Trace("ddi", "sdkTimerGetId ret: %d\r\n", timerid);
-
-	while (!sdkTimerIsEnd(timerid, timeoutvalue))
-	{
-		memset(buf, 0, sizeof(buf));
-		ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
-		Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
+	memset(buf, 0, sizeof(buf));
+	ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
+	Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
 //		Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
-		if(ret != 0x00)
-		{
-			return SDK_ERR;
-		}
 
-		if(buf[1] == 0x00)	//No card
-		{
-			rslt = SDK_ICC_NOCARD;
-		}
-		else if(buf[1] == 0x02)	//Multi Card Collision
-		{
-			return SDK_ICC_MUTICARD;
-		}
-		if(buf[1] == 0x03 || buf[1] == 0x04)
-		{
-			return SDK_OK;
-		}
-		else
-		{
-			rslt = SDK_ERR;
-		}
-		sdkmSleep(100);
-		key = sdkKbGetKey();
-		if(SDK_KEY_ESC == key)
-		{
-			return SDK_ICC_NOCARD;
-		}
+	if(buf[1] == 0x00)	//No card
+	{
+		return SDK_ICC_NOCARD;
+	}
+	else if(buf[1] == 0x02)	//Multi Card Collision
+	{
+		return SDK_ICC_MUTICARD;
+	}
+	else if(buf[1] == 0x03 || buf[1] == 0x04)
+	{
+		return SDK_OK;
+	}
+	else
+	{
+		return SDK_ERR;
 	}
 
-	return rslt;
 }
 
-int sdkIccResetIcc()
+int sdkIccResetIcc(u8 cardMode)
 {
 	u8 atr[100]={0};
 	u8 len,ic_card_type;
 	int ret;
 
-	ret = ddi_icc_power_on(SLOT_RF_CARD, 0x06, atr, &len, &ic_card_type);
+	if(cardMode == SDK_ICC_ICC)
+	{
+		ret = ddi_icc_power_on(SLOT_IC_CARD, 0x01, atr, &len, &ic_card_type);
+	}
+	else if(cardMode == SDK_ICC_RF)
+	{
+		ret = ddi_icc_power_on(SLOT_RF_CARD, 0x06, atr, &len, &ic_card_type);
+	}
+
 	if(0x00 == ret)
 	{
 		return SDK_OK;
@@ -697,7 +723,7 @@ void APDUTest(void)
 
 	if(detect_card_flag)
 	{
-		ret = sdkIccResetIcc();
+		ret = sdkIccResetIcc(SDK_ICC_RF);
 		Trace("test", "sdkIccResetIcc ret = %d\r\n", ret);
 		if(ret == 0)
 		{
@@ -818,14 +844,44 @@ bool sdkTimerIsEnd(long uiId, u32 uiMs)
 
 }
 
+s32 sdkDevContactSendAPDU(const u8 *pheInBuf, s32 siInLen, u8 *pheOutBuf, s32 *psiOutLen)
+{
+    s32 rslt = 0;
+	s32 size = 300;
 
+    if((NULL == pheInBuf) || (NULL == pheOutBuf) || (NULL == psiOutLen) || siInLen < 0)
+    {
+        return SDK_PARA_ERR;
+    }
 
-s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, u16 *psiOutLen)
+    TraceHex("emv", "contact c-apdu:", pheInBuf, siInLen);
+
+    rslt = ddi_icc_trans_apdu(CARD_TYPE_IC1, pheInBuf, siInLen, pheOutBuf, psiOutLen);
+
+    if(rslt == DDI_OK)
+    {
+    	TraceHex("emv", "contact r-apdu:", pheOutBuf, *psiOutLen);
+        return SDK_OK;
+    }
+    else if( rslt == 8)
+    {
+        return SDK_TIME_OUT;
+    }
+    else
+    {
+        return SDK_ERR;
+    }
+
+    return SDK_ERR;
+}
+
+s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, s16 *psiOutLen)
 {
     s32 ret = 0,rslt = 0;
 	u32 size = 512;
 	static long timerid = 0;
 	long timerid2 = 0;
+	u16 outBufLen = 0;
 
     if((NULL == pheInBuf) || (NULL == pheOutBuf) || (NULL == psiOutLen) || siInLen < 0)
     {
@@ -838,8 +894,8 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, u1
     }
 
 	TraceHex("apdu", "pheInBuf:", pheInBuf, siInLen);
-
-	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, psiOutLen);
+#if 0
+	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, &outBufLen);
 	timerid2 = sdkTimerGetId();
 
 	if(timerid != 0 && (timerid2 - timerid > 5000))
@@ -855,9 +911,32 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, u1
 	}
 
 	Trace("extern", "ddi_icc_trans_apdu ret = %d\r\n", ret);
+#else
+    while(1)
+    {
+		ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, &outBufLen);
 
+        timerid2 = sdkTimerGetId();
+    	if(timerid != 0 && (timerid + 1000 < timerid2))
+    	{
+            rslt = DetecteOther();
+            if(rslt == SDK_EQU)
+            {
+                *psiOutLen = -1;
+	            return SDK_ERR;
+            }
+    	}
+        if(memcmp(pheInBuf, "\x00\xB2", 2) != 0)
+        {
+            break;
+        }
+        sdkmSleep(10);
+    }
+
+#endif
     if(ret == DDI_OK)
     {
+		*psiOutLen = outBufLen;
 		Trace("apdu", "psiOutLen = %d\r\n", *psiOutLen);
     	TraceHex("emv", "contactless r-apdu:", pheOutBuf, *psiOutLen);
         return SDK_OK;

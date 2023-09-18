@@ -137,11 +137,31 @@ unsigned char EMVBase_ParseLen(unsigned char *ParseData,unsigned short index,uns
 	return 0;
 }
 
+unsigned char EMVBase_ParseSingleByteLen(unsigned char *ParseData, unsigned short *index, unsigned short *DataLen)
+{
+	unsigned char t;
+	unsigned short j,k,templen;
+
+	k = *index;
+	if(ParseData[k]>255 || ParseData[k] < 0)
+	{
+		return 1;
+	}
+	else
+	{
+		templen=ParseData[k];
+		k++;
+	}
+
+	*index = k;
+	*DataLen = templen;
+	return 0;
+}
+
 unsigned char EMVBase_ParseExtLen(unsigned char *ParseData,unsigned short *index,unsigned short *DataLen)
 {
-     unsigned char t;
-     unsigned short j,k,templen;
-
+	unsigned char t;
+	unsigned short j,k,templen;
 
 	k = *index;
 	if(ParseData[k]<=127)

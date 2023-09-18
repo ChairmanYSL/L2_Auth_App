@@ -99,6 +99,8 @@ typedef struct
 	unsigned char FCIParseErrorFlag;	//0-:FCI template present and parse correct;1-:FCI parse error;2-:FCI dont be obtained
 	unsigned char SecondTap;
 	unsigned char RequestOnlinePIN;
+	unsigned char RecoverPKSuccess;
+	unsigned char ODADataChecked;
 }PURETRADEPARAMETER;;
 
 

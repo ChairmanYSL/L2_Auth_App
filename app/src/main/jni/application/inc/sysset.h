@@ -108,8 +108,8 @@ typedef struct
 	unsigned char MTOLLen;
 //	unsigned char ATDTOL[64];	//Authentication Transaction Data Tag Object List
 //	unsigned char ATDTOLLen;
-//	unsigned char TransData[256];	//9F76
-//	unsigned char TransDataLen;
+	unsigned char TransData[256];	//9F76
+	unsigned char TransDataLen;
 }APPEX_AID_STRUCT;
 
 EXTERN APPEX_AID_STRUCT appex_aid_list[10];

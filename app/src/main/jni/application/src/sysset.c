@@ -2085,6 +2085,9 @@ s32 IccSetAIDEX()
 			sdkPureSetMTOL((termaidparam + i)->MTOL, (termaidparam + i)->MTOLLen);
 			TraceHex("SetBeforeGPO", "MTOL ", (termaidparam + i)->MTOL, (termaidparam + i)->MTOLLen);
 
+			ret = sdkEMVBaseConfigTLV("\x9F\x76", (termaidparam + i)->TransData, (termaidparam + i)->TransDataLen);
+			TraceHex("SetBeforeGPO", "Trans Data ", (termaidparam + i)->TransData, (termaidparam + i)->TransDataLen);
+			Trace("SetBeforeGPO", "sdkEMVBaseConfigTLV ret = %d\r\n", ret);
 			break;
         }
     }

@@ -1053,19 +1053,19 @@ s32 BCTCTlvToAIDStruct(u8 *buf, u16 ilen)
 //    }
 //	TraceHex("Download AID", "Authentication Transaction Data Tag Object List (ATDTOL)", extempAid->ATDTOL, TlvLen(pbTlv));
 
-//	pbTlv = TlvSeek(buf, ilen, 0x9F76);	//Authentication Transaction Data Tag Object List (ATDTOL)
-//
-//    if(pbTlv != NULL)
-//    {
-//        pb = TlvVPtr(pbTlv);
-//		extempAid->TransDataLen = TlvLen(pbTlv);
-//		if(extempAid->TransDataLen > 256)
-//		{
-//			extempAid->TransDataLen = 256;
-//		}
-//        memcpy(extempAid->TransData, pb, extempAid->TransDataLen);
-//		TraceHex("Download AID", "Terminal Transaction Data(9F76)", extempAid->TransData, extempAid->TransDataLen);
-//    }
+	pbTlv = TlvSeek(buf, ilen, 0x9F76);	//Authentication Transaction Data Tag Object List (ATDTOL)
+
+    if(pbTlv != NULL)
+    {
+        pb = TlvVPtr(pbTlv);
+		extempAid->TransDataLen = TlvLen(pbTlv);
+		if(extempAid->TransDataLen > 255)
+		{
+			extempAid->TransDataLen = 255;
+		}
+        memcpy(extempAid->TransData, pb, extempAid->TransDataLen);
+		TraceHex("Download AID", "Terminal Transaction Data(9F76)", extempAid->TransData, extempAid->TransDataLen);
+    }
 
 //	ReadSimData(&SimData);
 //	pbTlv = TlvSeek(buf, ilen, 0xDF7F);	//Authentication Transaction Data Tag Object List (ATDTOL)
@@ -3411,10 +3411,9 @@ void BCTCSendDataRecord(void)
     u8 ComPackSend[512],data[256],aid[16],dataRecord[512-10];
     u16 ComPackSendLen, ComPackRecvLen;
     u8 MsgType,Transtype,ATOLLen;
-	u8 *tag,*ATOL;
 	s32 dataLen=0,i,index,tmplen,pos;
 	s32 j = 0;
-	u8 firstByte,secondByte;
+	u8 firstByte,secondByte,tag[2];
 	u8 high,low;
 
     MsgType = BCTC_MNG_TermDispUI_SEND;
@@ -3438,9 +3437,9 @@ void BCTCSendDataRecord(void)
 
 	ComPackSendLen = 0;
 	ComPackSend[ComPackSendLen++] = MsgType;
-	Trace("Test", "Msgtype: %02X\r\n", MsgType);
-	Trace("Test", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
-	Trace("Test", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
+//	Trace("Test", "Msgtype: %02X\r\n", MsgType);
+//	Trace("Test", "ComPackSend[0]: %02X\r\n", ComPackSend[0]);
+//	Trace("Test", "ComPackSend[ComPackSendLen]: %02X\r\n", ComPackSend[ComPackSendLen]);
 
 	memcpy(ComPackSend+ComPackSendLen, "\xFF\x81\x05", 3);
 	ComPackSendLen += 3;
@@ -3451,8 +3450,8 @@ void BCTCSendDataRecord(void)
 	sdkEMVBaseReadTLV("\x9F\x06", aid, &tmplen);
 
 
-	TraceHex("Test", "aid in Test AID: ", aid, tmplen);
-	Trace("Test", "TransType in Test AID: %02X\r\n ", Transtype);
+//	TraceHex("Test", "aid in Test AID: ", aid, tmplen);
+//	Trace("Test", "TransType in Test AID: %02X\r\n ", Transtype);
 
 //	for(i = 0; i < sizeof(appex_aid_list)/sizeof(APPEX_AID_STRUCT); i++)
 //	{
@@ -3479,21 +3478,21 @@ void BCTCSendDataRecord(void)
 	j = 0;
 	pos = 0;
 
-	Trace("Test", "ATOL Len in Extern AID: %d\r\n", appex_aid_list[i].ATOLLen);
-	TraceHex("Test", "ATOL in Extern AID: ", appex_aid_list[i].ATOL, appex_aid_list[i].ATOLLen);
+//	Trace("Test", "ATOL Len in Extern AID: %d\r\n", appex_aid_list[i].ATOLLen);
+//	TraceHex("Test", "ATOL in Extern AID: ", appex_aid_list[i].ATOL, appex_aid_list[i].ATOLLen);
 
 	while(j < appex_aid_list[i].ATOLLen)
 	{
 //		Trace("Test", "Entry while\r\n");
 		firstByte = appex_aid_list[i].ATOL[j];
-		Trace("Test", "firstByte: %02X\r\n", firstByte);
+//		Trace("Test", "firstByte: %02X\r\n", firstByte);
 		if((firstByte & 0x1F) == 0x1F)
 		{
 //			secondByte = appex_aid_list[i].ATOL[j+1];
 //			Trace("Test", "Entry Double byte TAG deal\r\n");
-			tag = (u8 *)sdkGetMem(2);
-			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 2);
-			TraceHex("Test", "Tag in ATOL", tag, 2);
+			tag[0] = firstByte;
+			tag[1] = appex_aid_list[i].ATOL[j+1];
+//			TraceHex("Test", "Tag in ATOL", tag, 2);
 			if(sdkEMVBaseReadTLV(tag, data, &dataLen) == SDK_OK)
 			{
 				memcpy(dataRecord+pos, tag, 2);
@@ -3517,18 +3516,12 @@ void BCTCSendDataRecord(void)
 					dataRecord[pos++] = high;
 					dataRecord[pos++] = low;
 				}
-				Trace("Test", "data len: %d\r\n", dataLen);
+//				Trace("Test", "data len: %d\r\n", dataLen);
 				memcpy(dataRecord+pos, data, dataLen);
-				TraceHex("Test", "data", data, dataLen);
+//				TraceHex("Test", "data", data, dataLen);
 				pos += dataLen;
 
-				if(!memcmp(tag, "\x9F\x77", 2))
-				{
-					Trace("test", "read 9F77 len = %d\r\n", dataLen);
-					TraceHex("test", "data", data, dataLen);
-				}
 			}
-			sdkFreeMem(tag);
 			j += 2;
 		}
 		else
@@ -3536,7 +3529,7 @@ void BCTCSendDataRecord(void)
 ////			Trace("Test", "Entry Single byte TAG deal\r\n");
 //			tag = (u8 *)sdkGetMem(1);
 //			memcpy(tag, &(appex_aid_list[i].ATOL[j]), 1);
-			Trace("Test", "Tag in ATOL: %02X\r\n", firstByte);
+//			Trace("Test", "Tag in ATOL: %02X\r\n", firstByte);
 			if(sdkEMVBaseReadTLV(&firstByte, data, &dataLen) == SDK_OK)
 			{
 //				memcpy(dataRecord+pos, firstByte, 1);
@@ -3561,12 +3554,11 @@ void BCTCSendDataRecord(void)
 					dataRecord[pos++] = low;
 				}
 
-				Trace("Test", "data len: %d\r\n", dataLen);
+//				Trace("Test", "data len: %d\r\n", dataLen);
 				memcpy(dataRecord+pos, data, dataLen);
-				TraceHex("Test", "data", data, dataLen);
+//				TraceHex("Test", "data", data, dataLen);
 				pos += dataLen;
 			}
-			sdkFreeMem(tag);
 			j += 1;
 		}
 	}
@@ -3590,11 +3582,11 @@ void BCTCSendDataRecord(void)
 		low = (pos & 0xFF);
 		ComPackSend[index+1] = high;
 		ComPackSend[index+2] = low;
-		Trace("test", "low = %02X\r\n", low);
-		Trace("test", "pos = %d\r\n", pos);
+//		Trace("test", "low = %02X\r\n", low);
+//		Trace("test", "pos = %d\r\n", pos);
 		ComPackSendLen += 3;
 	}
-	TraceHex("Test", "data record", dataRecord, pos);
+//	TraceHex("Test", "data record", dataRecord, pos);
 
 	memcpy(ComPackSend+ComPackSendLen, dataRecord, pos);
 	ComPackSendLen += pos;

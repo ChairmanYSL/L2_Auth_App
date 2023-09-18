@@ -670,24 +670,80 @@ void IccDispText(u8 *Text)
 
 s32 IccReadCard()
 {
-    s32 rslt;
+    s32 rslt,key;
     int i=0;
+	u8 cardMode = /*SDK_ICC_ICC|*/SDK_ICC_RF;
+	long timerID;
 
-	rslt = sdkIccOpenRfDev();
-	if(rslt != 0)
+	if(cardMode & SDK_ICC_RF)
 	{
-		sdkTestIccDispText("Open RF Dev fail!");
-		return SDK_ERR;
+		rslt = sdkIccOpenRfDev();
+		if(rslt != 0)
+		{
+			sdkTestIccDispText("Open RF Dev fail!");
+			return SDK_ERR;
+		}
 	}
 
-	rslt = sdkIccPowerOnAndSeek();
-	Trace("read card", "sdkIccPowerOnAndSeek ret = %d\r\n", rslt);
-	if(rslt != SDK_OK)
+	if(cardMode & SDK_ICC_ICC)
 	{
-		return rslt;
+		rslt = sdkIccOpenRfDev();
+		if(rslt != 0)
+		{
+			sdkTestIccDispText("Open IC Dev fail!");
+			return SDK_ERR;
+		}
 	}
 
-	return SDK_OK;
+	timerID = sdkTimerGetId();
+
+	while (1)
+	{
+		if(cardMode & SDK_ICC_RF)
+		{
+			rslt = sdkIccPowerOnAndSeek();
+			Trace("read card", "sdkIccPowerOnAndSeek ret = %d\r\n", rslt);
+			if(rslt == SDK_OK || rslt == SDK_ICC_MUTICARD)
+			{
+				gCardMode = SDK_ICC_RF;
+				return rslt;
+			}
+			else if(rslt != SDK_ICC_NOCARD && rslt != SDK_ICC_MUTICARD)
+			{
+                IccDispText(DISP_ERR_READCARD);
+				return SDK_ERR;
+			}
+		}
+		else if(cardMode & SDK_ICC_ICC)
+		{
+			rslt =sdkIccGetCardStatus(100);
+			if(rslt == SDK_OK)
+			{
+				gCardMode = SDK_ICC_ICC;
+				return rslt;
+			}
+			else if(rslt != SDK_ICC_NOCARD)
+			{
+                IccDispText(DISP_ERR_READCARD);
+				return SDK_ERR;
+			}
+		}
+
+		key = sdkKbGetKey();
+		if(SDK_KEY_ESC == key)
+		{
+			return SDK_ESC;
+		}
+
+		if(sdkTimerIsEnd(timerID, 20*1000))
+		{
+			return SDK_TIME_OUT;
+		}
+
+		sdkmSleep(10);
+	}
+
+	return SDK_ERR;
 }
 
 s32 InputCreditPwd(const u8 *bcdTradeAmount, u8 PINTryCount, u8 IccEncryptWay, u8 *pCreditPwd)
@@ -1195,9 +1251,10 @@ s32 DealTrade(void)
 	u8 rspcode[2];
 //	_SimData SimData;
 	SDK_EMVBASE_CL_HIGHESTAID tempaid = {0};
-	u8 FlowContinueFlag = 1;
+	u8 FlowContinueFlag = 1, cvmRes;
 	u8 AmountBCD[6], Passwd[64];
 	s32 len;
+	SDK_EMVBASE_CL_HIGHESTAID tempHighestAID={0};
 
 	gCollisionflag = 0;
 	gCollisionCounter = 0;
@@ -1224,16 +1281,17 @@ _RETRY:
 	sdkEMVBaseSetOutcome(sdkSetOutcomeParam);
 	sdkEMVBaseSetUIRequest(sdkSetUIRequestParam);
 
+	Trace("app","BCTCSendOutCome pointer= %p\r\n",BCTCSendOutCome);
+	Trace("app","BCTCSendUIRequest pointer= %p\r\n",BCTCSendUIRequest);
+
+
 _SECONDTAP:
 	ReadCardDisp();
-	sdkmSleep(500);
+//	sdkmSleep(500);
 	ret = IccReadCard();
 	Trace("app","IccReadCard ret= %d\r\n",ret);
-	if(SDK_OK == ret)
-	{
 
-	}
-	else if(SDK_ICC_MUTICARD == ret)
+	if(SDK_ICC_MUTICARD == ret)
 	{
 		sdkTestIccDispText("Multi Card Collision");
 		sdkIccPowerDown();
@@ -1242,27 +1300,19 @@ _SECONDTAP:
 		sdkmSleep(1000);
 		goto _SECONDTAP;
 	}
-	else if(SDK_ERR == ret)
+	else if(SDK_OK != ret)
 	{
 		sdkIccCloseRfDev();
+		sdkIccCloseIcDev();
 		sdkTestIccDispText("Read Card error,Tx Stop");
-		return SDK_ICC_NOCARD;
+		return SDK_ERR;
 	}
-	else if(SDK_ICC_NOCARD == ret)
-	{
-		sdkIccCloseRfDev();
-		return SDK_ICC_NOCARD;
-	}
-	else
-	{
-		sdkIccCloseRfDev();
-		return SDK_ICC_NOCARD;
-	}
-
 
 	ImportTradeAmount();
 
-	ret = sdkIccResetIcc();
+	Trace("app","gCardMode= %02X\r\n",gCardMode);
+	ret = sdkIccResetIcc(gCardMode);
+	Trace("app","sdkIccResetIcc ret = %d\r\n",ret);
 	if(ret != SDK_OK)
 	{
 		return SDK_ERR;
@@ -1276,6 +1326,42 @@ _SECONDTAP:
 		{
 			case EMV_REQ_PREPROCESS_LOADAIDPARAM:
 				IccSetAIDEX();
+				break;
+
+			case EMV_REQ_SELECT_NEXT:
+				sdkEMVBaseTransInit();
+				sdkPureTransInit();
+
+				sdkEMVBaseCreateUnpredictNum();
+				memset(&tempHighestAID, 0, sizeof(SDK_EMVBASE_CL_HIGHESTAID));
+				ret = sdkEMVBaseReSelectApp(&tempHighestAID);
+				Trace("emv", "sdkEMVBaseReSelectApp ret = %d\r\n", ret);
+				if(ret != SDK_OK)
+				{
+					sdkPureSetCandidateListEmptyFlag(1);
+					sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+					BCTCSendOutCome();
+
+					sdkmSleep(100);
+
+					sdkSetUIRequestParam(SDK_UI_MSGID_PLSREMOVECARD, SDK_UI_STATUS_PROCESSINGERR, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+					BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+
+					Trace("app", "Start pure_Outcome_EndApplication_EmptyCandidateList\r\n");
+					ret = EMV_ENDAPPLICATION;
+					sdkIccPowerDown();
+					sdkIccCloseRfDev();
+					sdkTestIccDispText("End Application");
+					FlowContinueFlag = 0;
+				}
+				sdkPureSetSendOutcome(BCTCSendOutCome);
+				sdkPureSetSendUIRequest(BCTCSendUIRequest);
+				sdPureSetCmpCardNO(PureCompareCardNo);
+				sdkEMVBaseSetSendOutcome(BCTCSendOutCome);
+				sdkEMVBaseSetSendUIRequest(BCTCSendUIRequest);
+				sdkEMVBaseSetOutcome(sdkSetOutcomeParam);
+				sdkEMVBaseSetUIRequest(sdkSetUIRequestParam);
+				sdkPureSetReSelectApp(true);
 				break;
 
 			case EMV_REQ_ONLINE_PIN:
@@ -1309,12 +1395,50 @@ _SECONDTAP:
 			case EMV_ACCEPTED_ONLINE:
 //				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Approve");
+				cvmRes = sdkEMVBaseGetCVMresult();
+				switch (cvmRes)
+				{
+					case SDKEMVBASE_CVM_NA:
+						cvmRes = SDK_OUTCOME_CVM_NA;
+						break;
+					case SDKEMVBASE_CVM_NOCVMREQ:
+						cvmRes = SDK_OUTCOME_CVM_NOCVMREQ;
+						break;
+					case SDKEMVBASE_CVM_OBTAINSIGNATURE:
+						cvmRes = SDK_OUTCOME_CVM_OBTAINSIGNATURE;
+						break;
+					case SDKEMVBASE_CVM_ONLINEPIN:
+						cvmRes = SDK_OUTCOME_CVM_ONLINEPIN;
+						break;
+					case SDKEMVBASE_CVM_CONFVERIFIED:
+						cvmRes = SDK_OUTCOME_CVM_CONFVERIFIED;
+						break;
+					default:
+						cvmRes = SDK_OUTCOME_CVM_NA;
+						break;
+				}
+
+				sdkSetOutcomeParam(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, cvmRes, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+				BCTCSendOutCome();
+
+				sdkmSleep(100);
+
+				sdkSetUIRequestParam(SDK_UI_MSGID_APPROVED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+				BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
 				FlowContinueFlag = 0;
 				break;
 
 			case EMV_DENIALED_ONLINE:
 //				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Decline");
+
+				sdkSetOutcomeParam(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+				BCTCSendOutCome();
+				sdkmSleep(100);
+
+				sdkSetUIRequestParam(SDK_UI_MSGID_NOTAUTHORISED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+				BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+
 				FlowContinueFlag = 0;
 				break;
 

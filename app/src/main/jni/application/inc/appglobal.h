@@ -60,6 +60,7 @@ EXTERN u8 gDispSecondTap;//zwb 170509
 
 EXTERN unsigned char gJCBPaperNum;
 
+EXTERN u8 gCardMode;	//检卡冲突标志位
 EXTERN u8 gCollisionflag;	//检卡冲突标志位
 EXTERN u8 gCollisionCounter;	//检卡冲突计数器
 EXTERN u8 gTransCurrExponent;
