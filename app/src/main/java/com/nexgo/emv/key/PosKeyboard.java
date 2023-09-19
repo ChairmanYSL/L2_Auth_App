@@ -100,9 +100,9 @@ public class PosKeyboard extends Keyboard {
 	}
 
 	public int Kb_GetKey() {
-		try {
-			Thread.sleep(100);
-		}catch (Exception e){}
+//		try {
+//			Thread.sleep(100);
+//		}catch (Exception e){}
 		if(keyList.size()<=0){
 			return 0;
 		}

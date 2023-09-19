@@ -1491,7 +1491,8 @@ _SECONDTAP:
 				sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Ready to Read", SDK_DISP_DEFAULT);
 				sdkDispBrushScrecen();
 				sdkIccPowerDown();
-				sdkmSleep(1000);
+				sdkIccCloseRfDev();
+				sdkmSleep(2000);
 
 				ret = SendOnlineBag();
 				if(ret != SDK_OK)
@@ -1754,7 +1755,7 @@ s32 DetecteOther()
 #else
 	s32 key = 0;
 	u32 count;
-	for(count = 0; count < 400; count++)
+	for(count = 0; count < 500; count++)
 	{
 		sdkmSleep(1);
 		key = sdkKbGetKey();

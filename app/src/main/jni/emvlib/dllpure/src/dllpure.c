@@ -289,6 +289,51 @@ unsigned char pure_Outcome_EndApplication_EmptyCandidateList(PURETradeUnionStruc
 	return RLT_EMV_TERMINATE_TRANSERR;
 }
 
+unsigned char pure_Outcome_TransactionCancellationByContactlessReader(PURETradeUnionStruct * tempApp_UnionStruct)
+{
+	//K21.14
+	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+	tempApp_UnionStruct->SendOutcome();
+	sdkmSleep(100);
+	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_ERROR_TRYOTHERCARD, SDK_UI_STATUS_PROCESSINGERR, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+	EMVBase_Trace("Start pure_Outcome_TransactionCancellationByContactlessReader\r\n");
+	return RLT_ERR_EMV_CancelTrans;
+}
+
+unsigned char pure_CheckTagExistMTOL(unsigned char *tag, unsigned char tagLen)
+{
+	EMVBASETAGCVLITEM *itemMTOL;
+	int i;
+
+	itemMTOL = emvbase_avl_gettagitempointer(EMVTAG_PUREMTOL);
+//	EMVBase_TraceHex("PURE-info: MTOL in kernel", itemMTOL->data, itemMTOL->len);
+
+	if(itemMTOL != NULL)
+	{
+		for(i = 0; i < itemMTOL->len; i+= 3)
+		{
+			if(0x00 == itemMTOL->data[i])
+			{
+				break;
+			}
+
+			if(!memcmp(tag, &(itemMTOL->data[i]), tagLen))
+			{
+				EMVBase_TraceHex("PURE-info: MTOL Item", tag, tagLen);
+				return emvbase_avl_checkiftagexist(tag);
+			}
+		}
+	}
+	else
+	{
+		return 2;
+	}
+
+	return 0;
+}
+
+
 unsigned char pure_CheckDataMissSDA(PURETradeUnionStruct *tempApp_UnionStruct)
 {
     unsigned char i;
@@ -1763,7 +1808,7 @@ unsigned char pure_ParseAndStoreCardResponse(PURETradeUnionStruct *tempApp_Union
     unsigned short index, len, tagdatalen;
     //unsigned char ifemvtag;  //tmpdata,tagindex,tmpval,addvalue,
     unsigned char bInTable;
-    unsigned char tag[4], taglen;
+    unsigned char tag[4], taglen,tagItemLen;
     unsigned char ret;
     //unsigned char needdonextstep = 1;
     EMVBASETAGCVLITEM tagitem;
@@ -1796,8 +1841,17 @@ unsigned char pure_ParseAndStoreCardResponse(PURETradeUnionStruct *tempApp_Union
         if(tag[1] & 0x80)
         {
             tag[taglen++] = DataOut[index + 2];
+			tagItemLen = 3;
         }
+		else
+		{
+			tagItemLen = 2;
+		}
     }
+	else
+	{
+		tagItemLen = 0;
+	}
 
 	EMVBase_Trace("PURE-info: Tag%02X%02X parsing\r\n", tag[0], tag[1]);
     ret = pure_checkifwrongtag(tempApp_UnionStruct, tag, taglen, &tagitem, readstep);
@@ -1816,6 +1870,26 @@ unsigned char pure_ParseAndStoreCardResponse(PURETradeUnionStruct *tempApp_Union
 			{
 				EMVBase_Trace("tag 9F02 length error!\r\n");
 				return RLT_ERR_EMV_IccDataFormat;
+			}
+		}
+		if(pure_CheckTagExistMTOL(tag, tagItemLen) == 1)
+		{
+			index += taglen;
+
+			if(EMVBase_ParseExtLen(DataOut, &index, &len))
+			{
+				EMVBase_Trace("PURE-error: Tag parsing error\r\n");
+				return RLT_ERR_EMV_IccDataFormat;
+			}
+			tagdatalen = len;
+			if(len)
+			{
+				EMVBase_TraceHex("PURE-info: create Tag:", tag, 3);
+				EMVBase_TraceHex("PURE-info: Tag Value:", &DataOut[index], tagdatalen);
+				emvbase_avl_createsettagvalue(tag, &DataOut[index], tagdatalen);
+
+				index += len;
+				bInTable = 1;
 			}
 		}
     }
@@ -3215,13 +3289,14 @@ unsigned char pure_InitialApp(PURETradeUnionStruct *tempApp_UnionStruct)
 unsigned char pure_DealAFLData(PURETradeUnionStruct *tempApp_UnionStruct)
 {
     unsigned char temp[50];
-    EMVBASETAGCVLITEM *item, *item1, *item2;
+    EMVBASETAGCVLITEM *itemMTOL, itemTag={0};
     unsigned char TransType = tempApp_UnionStruct->EMVTradeParam->CurTransType;
 	unsigned char CDOL1Exist=0,PanExist=0, MTOLExist=0;
 	unsigned char Impletion = tempApp_UnionStruct->EMVTradeParam->PureImplementationOption;
 	unsigned char KernelCap[5]={0},Tag[3]={0};
-	int i;
+	int i, ret;
 	unsigned char CVMListExist = emvbase_avl_checkiftagexist(EMVTAG_CVMList);
+	unsigned char tagLen = 0;
 
 	emvbase_avl_gettagvalue_spec(EMVTAG_PUREKernelCap, KernelCap, 0, 5);
 	if((Impletion & 0x10) && (KernelCap[3] & 0x40))
@@ -3246,16 +3321,22 @@ unsigned char pure_DealAFLData(PURETradeUnionStruct *tempApp_UnionStruct)
 		return pure_Outcome_TransactionCompletedOnError(tempApp_UnionStruct);
 	}
 
-	item2 = emvbase_avl_gettagitempointer(EMVTAG_PUREMTOL);
-	if(item2 != NULL)
+	itemMTOL = emvbase_avl_gettagitempointer(EMVTAG_PUREMTOL);
+	EMVBase_TraceHex("PURE-info: MTOL in kernel", itemMTOL->data, itemMTOL->len);
+	if(itemMTOL != NULL)
 	{
-		for(i = 0; i < item2->len; i+=3)
+		for(i = 0; i < itemMTOL->len; i+=3)
 		{
-			if(0x00 == item2->data[i])
+			EMVBase_Trace("PURE-info: i = %d\r\n", i);
+			EMVBase_Trace("PURE-info: item2->data[%d] = %d\r\n", i, itemMTOL->data[i]);
+			EMVBase_TraceHex("PURE-info: MTOL Item", (itemMTOL->data)+i, 3);
+			if(0x00 == itemMTOL->data[i])
 			{
 				break;
 			}
-			memcpy(Tag, &(item2->data[i]), 3);
+			memset(Tag, 0, 3);
+			memcpy(Tag, (itemMTOL->data)+i, 3);
+
 			MTOLExist = emvbase_avl_checkiftagexist(Tag);
 			if(0 == MTOLExist)
 			{
@@ -6789,17 +6870,26 @@ unsigned char pure_GAC1AndAnalys(PURETradeUnionStruct *tempApp_UnionStruct, unsi
 	//K14.4
 	if(apdu_r.ReadCardDataOk != RLT_EMV_OK)
 	{
-		EMVBase_Trace("PURE-error: apdu timeout or other error\r\n");
-		if(0x00 == tempApp_UnionStruct->EMVTradeParam->ECHOCommandSupport)
+		if(apdu_r.ReadCardDataOk == APDUCOMMCANCEL)
 		{
-			return pure_Outcome_CommunicationErrors_PaymentTransactionNotCompleted(tempApp_UnionStruct);
+			EMVBase_Trace("PURE-error: user cancel trans\r\n");
+			return pure_Outcome_TransactionCancellationByContactlessReader(tempApp_UnionStruct);
 		}
 		else
 		{
-			tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator = 0x01;
-			pure_Outcome_CommunicationErrors_UnknownPaymentResult(tempApp_UnionStruct);
-			return RLT_EMV_TORN;
+			EMVBase_Trace("PURE-error: apdu timeout or other error\r\n");
+			if(0x00 == tempApp_UnionStruct->EMVTradeParam->ECHOCommandSupport)
+			{
+				return pure_Outcome_CommunicationErrors_PaymentTransactionNotCompleted(tempApp_UnionStruct);
+			}
+			else
+			{
+				tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator = 0x01;
+				pure_Outcome_CommunicationErrors_UnknownPaymentResult(tempApp_UnionStruct);
+				return RLT_EMV_TORN;
+			}
 		}
+
 	}
 
 	retCode = pure_DealGAC1Rsp(tempApp_UnionStruct, &apdu_r, TermAnaResult);
@@ -6923,7 +7013,7 @@ unsigned char pure_TransResultAnalysis(PURETradeUnionStruct *tempApp_UnionStruct
 	{
 		EMVBase_Trace("pure-info: first Card Read OK\r\n");
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_CARDREADOK, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
-		tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+		tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_SELFDEFINE);
 	}
 
 	return RLT_EMV_OK;
@@ -7705,7 +7795,11 @@ unsigned char pure_PerformCVM(PURETradeUnionStruct *tempApp_UnionStruct, unsigne
     unsigned char retCode = 0;
     unsigned char temp=0;
     unsigned char CVMResult[3]={0};
+	unsigned char KernelCap[5]={0};
+
     temp = method & 0x3F;
+
+	emvbase_avl_gettagvalue_spec(EMVTAG_PUREKernelCap, KernelCap, 0, 5);
 
 	EMVBase_Trace("pure-info: pure_PerformCVM temp = %02X\r\n", temp);
 	switch(temp)
@@ -7775,6 +7869,10 @@ unsigned char pure_PerformCVM(PURETradeUnionStruct *tempApp_UnionStruct, unsigne
 			return PURE_ERR_CVMNoSupport;
 
 		case 0x24:
+			if((KernelCap[2] & 0x40) == 0)
+			{
+				return PURE_ERR_CVMNoSupport;
+			}
 			CVMResult[2] = CVMR_UNKNOWN;
 			tempApp_UnionStruct->EMVTradeParam->PureCVMParameter = SDK_OUTCOME_CVM_CONFVERIFIED;
 			break;

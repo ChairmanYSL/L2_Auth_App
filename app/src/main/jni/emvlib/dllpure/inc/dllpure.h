@@ -31,6 +31,8 @@
 
 #define PURE_UIREQ_OUTCOME		0x01
 #define PURE_UIREQ_RESTART		0x02
+#define PURE_UIREQ_SELFDEFINE	0x03
+
 
 typedef struct
 {

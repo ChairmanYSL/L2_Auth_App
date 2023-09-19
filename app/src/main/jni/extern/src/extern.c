@@ -662,6 +662,7 @@ void APDUTest(void)
 	u8 ppse_cmd[]="\x00\xA4\x04\x00\x0E\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31\x00";
 	u8 ppse_rsp[64]={0};
 	u16 recv_len=10;
+	u8 cmd1[]="\x00\xA4\x04\x00\x07\xD9\x99\x99\x99\x99\x10\x10\x00";
 
 	sdkDispClearScreen();
 	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Plz tap card", SDK_DISP_DEFAULT);
@@ -725,13 +726,112 @@ void APDUTest(void)
 	{
 		ret = sdkIccResetIcc(SDK_ICC_RF);
 		Trace("test", "sdkIccResetIcc ret = %d\r\n", ret);
-		if(ret == 0)
+		if(ret == SDK_OK)
 		{
 			sdkDispClearRow(SDK_DISP_LINE4);
 			sdkDispFillRowRam(SDK_DISP_LINE4, 0, "Reset card success", SDK_DISP_DEFAULT);
 			sdkDispBrushScrecen();
 
 			ret = ddi_icc_trans_apdu(0x04, ppse_cmd, 20, ppse_rsp, &recv_len);
+			Trace("test", "ddi_icc_trans_apdu ret = %d\r\n", ret);
+			if(ret == DDI_OK)
+			{
+				sdkDispClearRow(SDK_DISP_LINE4);
+				sdkDispFillRowRam(SDK_DISP_LINE4, 0, "APDU success", SDK_DISP_DEFAULT);
+				sdkDispBrushScrecen();
+			}
+			else
+			{
+				sdkDispClearRow(SDK_DISP_LINE4);
+				sdkDispFillRowRam(SDK_DISP_LINE4, 0, "APDU fail", SDK_DISP_DEFAULT);
+				sdkDispBrushScrecen();
+				return;
+			}
+		}
+		else
+		{
+			sdkDispClearRow(SDK_DISP_LINE4);
+			sdkDispFillRowRam(SDK_DISP_LINE4, 0, "Reset card fail", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+			return;
+		}
+	}
+
+	ddi_icc_power_off(0x06);
+	ddi_icc_close(SLOT_RF_CARD);
+
+	sdkmSleep(3000);
+
+
+	sdkDispClearRow(SDK_DISP_LINE2);
+	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Second Tap", SDK_DISP_DEFAULT);
+	sdkDispBrushScrecen();
+
+	ret = sdkIccOpenRfDev();
+	Trace("test", "sdkIccOpenRfDev ret = %d\r\n", ret);
+	if(ret != 0)
+	{
+		sdkDispClearRow(SDK_DISP_LINE2);
+		sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Open RF fail", SDK_DISP_DEFAULT);
+		sdkDispBrushScrecen();
+	}
+	else
+	{
+		sdkDispClearRow(SDK_DISP_LINE2);
+		sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Open RF success", SDK_DISP_DEFAULT);
+		sdkDispBrushScrecen();
+	}
+
+	while (1)
+	{
+		sdkmSleep(500);
+		key = sdkKbGetKey();
+		if(SDK_KEY_ESC == key)
+		{
+			return;
+		}
+
+		ret = sdkIccPowerOnAndSeek();
+		Trace("test", "sdkIccPowerOnAndSeek ret = %d\r\n", ret);
+		if(ret == SDK_OK)
+		{
+			sdkDispClearRow(SDK_DISP_LINE3);
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Check Card success", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+			detect_card_flag = 1;
+			break;
+		}
+		else if(SDK_ICC_MUTICARD == ret)
+		{
+			sdkDispClearRow(SDK_DISP_LINE3);
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Multi card collision", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+		}
+		else if(SDK_ICC_NOCARD == ret)
+		{
+			continue;
+		}
+		else
+		{
+			sdkDispClearRow(SDK_DISP_LINE3);
+			sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Check Card error", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+			break;
+		}
+
+	}
+
+	if(detect_card_flag)
+	{
+		ret = sdkIccResetIcc(SDK_ICC_RF);
+		Trace("test", "sdkIccResetIcc ret = %d\r\n", ret);
+		if(ret == SDK_OK)
+		{
+			sdkDispClearRow(SDK_DISP_LINE4);
+			sdkDispFillRowRam(SDK_DISP_LINE4, 0, "Reset card success", SDK_DISP_DEFAULT);
+			sdkDispBrushScrecen();
+
+			ret = ddi_icc_trans_apdu(0x04, cmd1, sizeof(cmd1), ppse_rsp, &recv_len);
 			Trace("test", "ddi_icc_trans_apdu ret = %d\r\n", ret);
 		}
 		else
@@ -894,11 +994,12 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, s1
     }
 
 	TraceHex("apdu", "pheInBuf:", pheInBuf, siInLen);
-#if 0
+#if 1
 	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, &outBufLen);
+	Trace("extern", "ddi_icc_trans_apdu ret = %d\r\n", ret);
 	timerid2 = sdkTimerGetId();
 
-	if(timerid != 0 && (timerid2 - timerid > 5000))
+	if(timerid != 0 && (timerid2 - timerid > 1000))
 	{
 		rslt = DetecteOther();
 		Trace("lishiyao", "DetecteOther ret = %d\r\n", rslt);

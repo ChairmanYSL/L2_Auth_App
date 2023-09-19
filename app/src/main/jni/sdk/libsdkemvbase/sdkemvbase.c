@@ -392,7 +392,7 @@ s32 sdkEMVBase_DealCLCardData(unsigned char *tempsenddata, unsigned short tempda
 		apdu_r->DataOut[templen - 2] = 0;
 		apdu_r->DataOut[templen - 1] = 0;
 	}
-	else if(templen == 0)
+	else if(templen < 0)
 	{
 		apdu_r->ReadCardDataOk = APDUCOMMCANCEL;
 		apdu_r->LenOut = 0;

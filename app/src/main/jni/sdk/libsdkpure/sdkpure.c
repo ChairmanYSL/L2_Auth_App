@@ -864,21 +864,25 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 
 	//section 9.2.2.3
 	Trace("pure-info:", "section 9.2.2.3\r\n");
+	Trace("pure-info:", "Error = %d\n", tempApp_UnionStruct->EMVTradeParam->Error);
 	if(tempApp_UnionStruct->EMVTradeParam->Error == 0)
 	{
 		if(sdkEMVBaseCheckTagExit("\x8A"))
 		{
 			if(gstPureTradeParam->CurProcessIndicator == TRANS_ONLINE_RESPONSE)
 			{
-				unsigned char respCode[2];
-				sdkEMVBaseReadTLV("\x8A", respCode, &len);
-				if(!memcmp(respCode, "\x30\x30", 2))
+				if(!gstPureTradeParam->SecondTap)
 				{
-					return SDK_EMV_TransOnlineApprove;
-				}
-				else if(!memcmp(respCode, "\x30\x35", 2))
-				{
-					return SDK_EMV_TransOnlineDecline;
+					unsigned char respCode[2];
+					sdkEMVBaseReadTLV("\x8A", respCode, &len);
+					if(!memcmp(respCode, "\x30\x30", 2))
+					{
+						return SDK_EMV_TransOnlineApprove;
+					}
+					else if(!memcmp(respCode, "\x30\x35", 2))
+					{
+						return SDK_EMV_TransOnlineDecline;
+					}
 				}
 			}
 			ErrorType = 2;
@@ -931,8 +935,13 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 			}
 		}
 	}
+
 	if(0 != tempApp_UnionStruct->EMVTradeParam->Error)
 	{
+		if(gstPureTradeParam->SecondTap)
+		{
+			tempApp_UnionStruct->EMVTradeParam->Error = 0;
+		}
 		goto _K2P6;
 	}
 
@@ -2422,6 +2431,21 @@ _DEALAFTERECHO:
 			}
 		case SDK_PURE_STATUS_KERNEL_DEACTIVATE:
 			ret = sdkPureKernelDeactivate(gstsdkPureTradeTable);
+
+#if 1
+				TraceHex("test", "cur select aid", gstPureTradeUnionStruct->EMVTradeParam->SelectedApp->AID, gstPureTradeUnionStruct->EMVTradeParam->SelectedApp->AIDLen);
+				if(!memcmp(gstPureTradeUnionStruct->EMVTradeParam->SelectedApp->AID, "\xA0\x00\x00\x02\x80\x20\x10", 7))
+				{
+					if(ret == SDK_EMV_TransOfflineDecline)
+					{
+						gPureTransStuatus = SDK_PURE_STATUS_SELECTAID;
+						gstPureTradeParam->CurProcessIndicator = TRANS_ONLINE_RESPONSE;
+						gstPureTradeParam->SecondTap = 1;
+						return EMV_REQ_SECONDTAP;
+					}
+				}
+#endif
+
 			if(SDK_EMV_TransOnlineWait == ret)
 			{
 				if(gstPureTradeParam->RequestOnlinePIN)

@@ -104,7 +104,7 @@ typedef struct
 	unsigned char CLAppCap[5];
 	unsigned char ATOL[64];		//Additional Tag Object List
 	unsigned char ATOLLen;
-	unsigned char MTOL[64];		//Mandatory Tag Object List
+	unsigned char MTOL[128];		//Mandatory Tag Object List
 	unsigned char MTOLLen;
 //	unsigned char ATDTOL[64];	//Authentication Transaction Data Tag Object List
 //	unsigned char ATDTOLLen;
