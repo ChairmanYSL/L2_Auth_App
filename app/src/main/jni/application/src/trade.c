@@ -672,7 +672,7 @@ s32 IccReadCard()
 {
     s32 rslt,key;
     int i=0;
-	u8 cardMode = /*SDK_ICC_ICC|*/SDK_ICC_RF;
+	u8 cardMode = SDK_ICC_ICC|SDK_ICC_RF;
 	long timerID;
 
 	if(cardMode & SDK_ICC_RF)
@@ -687,7 +687,7 @@ s32 IccReadCard()
 
 	if(cardMode & SDK_ICC_ICC)
 	{
-		rslt = sdkIccOpenRfDev();
+		rslt = sdkIccOpenIcDev();
 		if(rslt != 0)
 		{
 			sdkTestIccDispText("Open IC Dev fail!");
@@ -702,7 +702,7 @@ s32 IccReadCard()
 		if(cardMode & SDK_ICC_RF)
 		{
 			rslt = sdkIccPowerOnAndSeek();
-			Trace("read card", "sdkIccPowerOnAndSeek ret = %d\r\n", rslt);
+//			Trace("read card", "sdkIccPowerOnAndSeek ret = %d\r\n", rslt);
 			if(rslt == SDK_OK || rslt == SDK_ICC_MUTICARD)
 			{
 				gCardMode = SDK_ICC_RF;
@@ -1234,6 +1234,76 @@ s32 PureCompareCardNo(u8 *pasPAN)
 	return 0;
 }
 
+s32 APPPreProcess()
+{
+	s32 aidNum = 0,ret,i,tmp;
+    u8 temp[30];
+	u8 TempotherAmount[6] = {0};
+	u8 validAIDCounter = 0;
+
+	SDK_EMVBASE_AID_STRUCT AIDList = {0};
+
+	memcpy(TempotherAmount, gbcOtherAmount, 6);
+
+    memset(temp, 0,sizeof(temp));
+    sdkAscToBcdR(temp, gstasAmount, 6);
+
+//    sdkBcdAdd(temp, temp, 6, TempotherAmount, 6);
+	TraceHex("app", "Amount all in BCD", temp, 6);
+
+	sdkEMVBaseGetAIDListNum(&aidNum);
+	Trace("test", "aid num: %d\r\n", aidNum);
+
+	for(i = 0; i < aidNum; i++)
+	{
+		memset(&AIDList, 0, sizeof(SDK_EMVBASE_AID_STRUCT));
+		ret = sdkEMVBaseGetAnyAIDList(i, 1, &AIDList, &tmp);
+		if(ret == SDK_OK && tmp == 1)
+		{
+			TraceHex("test", "aid", AIDList.Aid, AIDList.AidLen);
+			TraceHex("test", "aid cl trans limit", AIDList.cl_translimit, 6);
+			TraceHex("test", "aid cvm limit", AIDList.cl_cvmlimit, 6);
+
+			if(!memcmp(AIDList.cl_translimit, "\xFF\xFF\xFF\xFF\xFF\xFF", 6))
+			{
+				continue;
+			}
+			else
+			{
+				if(memcmp(temp, AIDList.cl_translimit, 6) < 0) //trans amount overflow cl trans limit
+				{
+					validAIDCounter++;
+				}
+			}
+		}
+	}
+
+	Trace("test", "validAIDCounter: %d\r\n", validAIDCounter);
+	if(validAIDCounter > 0)
+	{
+		return SDK_OK;
+	}
+	else
+	{
+		return SDK_ERR;
+	}
+
+}
+
+s32 APPPreOnlineProcess()
+{
+	if((!sdkEMVBaseCheckTagExit("\x91")) && (!sdkEMVBaseCheckTagExit("\x71")) && (!sdkEMVBaseCheckTagExit("\x72")))
+	{
+		Trace("pure-info:", "Tag 91 or 71 or 72 missing\r\n");
+		sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+		BCTCSendOutCome();
+		return SDK_EMV_TransTerminate;
+	}
+
+	return SDK_OK;
+}
+
+
 s32 Badvice(void)
 {
      s32 CID_len = 0;
@@ -1251,7 +1321,7 @@ s32 DealTrade(void)
 	u8 rspcode[2];
 //	_SimData SimData;
 	SDK_EMVBASE_CL_HIGHESTAID tempaid = {0};
-	u8 FlowContinueFlag = 1, cvmRes;
+	u8 FlowContinueFlag = 1, cvmRes,secondtapFlag;
 	u8 AmountBCD[6], Passwd[64];
 	s32 len;
 	SDK_EMVBASE_CL_HIGHESTAID tempHighestAID={0};
@@ -1268,6 +1338,8 @@ _RETRY:
 
 	gstDetecteCardMode = 0;
 	bIssecondtapcard = 0;
+	HostOnlineStatus = 1;
+	gCardMode = 0;
 
 	memset(gstResponseCode,0,sizeof(gstResponseCode));
 
@@ -1281,13 +1353,23 @@ _RETRY:
 	sdkEMVBaseSetOutcome(sdkSetOutcomeParam);
 	sdkEMVBaseSetUIRequest(sdkSetUIRequestParam);
 
-	Trace("app","BCTCSendOutCome pointer= %p\r\n",BCTCSendOutCome);
-	Trace("app","BCTCSendUIRequest pointer= %p\r\n",BCTCSendUIRequest);
+//	Trace("app","BCTCSendOutCome pointer= %p\r\n",BCTCSendOutCome);
+//	Trace("app","BCTCSendUIRequest pointer= %p\r\n",BCTCSendUIRequest);
 
 
 _SECONDTAP:
+	ret = APPPreProcess();
+	if(ret == SDK_ERR)
+	{
+		sdkSetOutcomeParam(SDK_OUTCOME_RESULT_TRYANOTHERINTERFACE, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_CONTACTCHIP, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+		BCTCSendOutCome();
+		sdkmSleep(100);
+		sdkSetUIRequestParam(SDK_UI_MSGID_ERROR_SWITCHINTERFACE, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+		BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+		sdkTestIccDispText("Try Another Interface");
+		return ret;
+	}
 	ReadCardDisp();
-//	sdkmSleep(500);
 	ret = IccReadCard();
 	Trace("app","IccReadCard ret= %d\r\n",ret);
 
@@ -1302,6 +1384,10 @@ _SECONDTAP:
 	}
 	else if(SDK_OK != ret)
 	{
+		if(ret == SDK_ESC)
+		{
+			gstAutoTest = 0;
+		}
 		sdkIccCloseRfDev();
 		sdkIccCloseIcDev();
 		sdkTestIccDispText("Read Card error,Tx Stop");
@@ -1311,11 +1397,24 @@ _SECONDTAP:
 	ImportTradeAmount();
 
 	Trace("app","gCardMode= %02X\r\n",gCardMode);
+	if(gCardMode == SDK_ICC_ICC)
+	{
+		sdkIccPowerDown();
+		sdkIccCloseRfDev();
+	}
 	ret = sdkIccResetIcc(gCardMode);
-	Trace("app","sdkIccResetIcc ret = %d\r\n",ret);
+//	Trace("app","sdkIccResetIcc ret = %d\r\n",ret);
 	if(ret != SDK_OK)
 	{
 		return SDK_ERR;
+	}
+
+	if(gCardMode == SDK_ICC_ICC)
+	{
+		sdkEmvContactTransInit();
+		ret = sdkEmvContactTransFlow1();
+		sdkTestIccDispText("Offline Approve");
+		return ret;
 	}
 
 	while(FlowContinueFlag)
@@ -1388,6 +1487,32 @@ _SECONDTAP:
 					sdkPureImportOnlineResult(SDK_OK, gstResponseCode);
 				}
 
+				if(!HostOnlineStatus)
+				{
+					sdkIccPowerDown();
+					sdkIccCloseRfDev();
+					sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+					BCTCSendOutCome();
+					sdkTestIccDispText("End Application");
+					FlowContinueFlag = 0;
+					return ret;
+				}
+
+				secondtapFlag = sdkPureGetSecondTapFlag();
+				Trace("app", "secondtapFlag: %d\r\n", secondtapFlag);
+				if(secondtapFlag == 2)
+				{
+					ret = APPPreOnlineProcess();
+					if(ret != SDK_OK)
+					{
+						sdkIccPowerDown();
+						sdkIccCloseRfDev();
+						sdkTestIccDispText("End Application");
+						FlowContinueFlag = 0;
+						return ret;
+					}
+				}
+
 				memset(rspcode, 0, sizeof(rspcode));
 				sdkEMVBaseReadTLV("\x8A", rspcode, &ret);
 				TraceHex("app", "after sdkPureImportOnlineResult 8A", rspcode, 2);
@@ -1418,26 +1543,44 @@ _SECONDTAP:
 						break;
 				}
 
-				sdkSetOutcomeParam(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, cvmRes, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
-				BCTCSendOutCome();
+				if(secondtapFlag == 0)
+				{
+					sdkSetOutcomeParam(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, cvmRes, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+					BCTCSendOutCome();
 
-				sdkmSleep(100);
+					sdkmSleep(100);
 
-				sdkSetUIRequestParam(SDK_UI_MSGID_APPROVED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
-				BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+					sdkSetUIRequestParam(SDK_UI_MSGID_APPROVED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+					BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+				}
+//				sdkSetOutcomeParam(SDK_OUTCOME_RESULT_APPROVED, SDK_OUTCOME_START_NA, cvmRes, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+//				BCTCSendOutCome();
+//
+//				sdkmSleep(100);
+//
+//				sdkSetUIRequestParam(SDK_UI_MSGID_APPROVED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+//				BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
 				FlowContinueFlag = 0;
 				break;
 
 			case EMV_DENIALED_ONLINE:
 //				BCTCSendTransResult(ret);
 				sdkTestIccDispText("Online Decline");
+				if(secondtapFlag == 0)
+				{
+					sdkSetOutcomeParam(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+					BCTCSendOutCome();
+					sdkmSleep(100);
 
-				sdkSetOutcomeParam(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
-				BCTCSendOutCome();
-				sdkmSleep(100);
-
-				sdkSetUIRequestParam(SDK_UI_MSGID_NOTAUTHORISED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
-				BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+					sdkSetUIRequestParam(SDK_UI_MSGID_NOTAUTHORISED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+					BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
+				}
+//				sdkSetOutcomeParam(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+//				BCTCSendOutCome();
+//				sdkmSleep(100);
+//
+//				sdkSetUIRequestParam(SDK_UI_MSGID_NOTAUTHORISED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
+//				BCTCSendUIRequest(PURE_UIREQ_OUTCOME);
 
 				FlowContinueFlag = 0;
 				break;
@@ -1485,14 +1628,6 @@ _SECONDTAP:
 				goto _RETRY;
 
 			case EMV_REQ_SECONDTAP:
-				sdkDispClearScreen();
-				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Additional Tap", SDK_DISP_DEFAULT);
-				sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Plz present card again", SDK_DISP_DEFAULT);
-				sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Ready to Read", SDK_DISP_DEFAULT);
-				sdkDispBrushScrecen();
-				sdkIccPowerDown();
-				sdkIccCloseRfDev();
-				sdkmSleep(2000);
 
 				ret = SendOnlineBag();
 				if(ret != SDK_OK)
@@ -1503,6 +1638,37 @@ _SECONDTAP:
 				{
 					sdkPureImportOnlineResult(SDK_OK, gstResponseCode);
 				}
+
+				if(!HostOnlineStatus)
+				{
+					sdkIccPowerDown();
+					sdkIccCloseRfDev();
+					sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+					BCTCSendOutCome();
+
+					sdkTestIccDispText("End Application");
+					FlowContinueFlag = 0;
+					return ret;
+				}
+
+				ret = APPPreOnlineProcess();
+				if(ret != SDK_OK)
+				{
+					sdkIccPowerDown();
+					sdkIccCloseRfDev();
+					sdkTestIccDispText("End Application");
+					FlowContinueFlag = 0;
+					return ret;
+				}
+
+				sdkDispClearScreen();
+				sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Additional Tap", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Plz present card again", SDK_DISP_DEFAULT);
+				sdkDispFillRowRam(SDK_DISP_LINE3, 0, "Ready to Read", SDK_DISP_DEFAULT);
+				sdkDispBrushScrecen();
+				sdkIccPowerDown();
+				sdkIccCloseRfDev();
+				sdkmSleep(2000);
 
 				memset(rspcode, 0, sizeof(rspcode));
 				sdkEMVBaseReadTLV("\x8A", rspcode, &ret);
@@ -1754,16 +1920,17 @@ s32 DetecteOther()
 
 #else
 	s32 key = 0;
-	u32 count;
-	for(count = 0; count < 500; count++)
-	{
-		sdkmSleep(1);
-		key = sdkKbGetKey();
-		if(key != 0)
-		{
-			break;
-		}
-	}
+//	u32 count;
+//	for(count = 0; count < 500; count++)
+//	{
+//		sdkmSleep(1);
+//		key = sdkKbGetKey();
+//		if(key != 0)
+//		{
+//			break;
+//		}
+//	}
+	key = sdkKbGetKey();
 	Trace("lishiyao", "DetecteOther Get Key = %02x\r\n", key);
 	if(key == SDK_KEY_ESC)
 	{

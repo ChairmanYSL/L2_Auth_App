@@ -50,6 +50,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllemvbase/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllemvmath/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllpure/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllpure/privateinc
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/emvlib/dllemvcontact/inc
 
 ########################################################################source code
 

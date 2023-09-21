@@ -35,7 +35,7 @@ SDK_PURE_TRADE_PARAM *gstsdkPureTradeTable;
 
 s32 sdkPurePreprocess(PURETRADEPARAMETER * temp_Param);
 s32 sdkPureCheckRestrictAID(unsigned char *AID, int len);
-
+u8 sdkPurePreOnlineProcess();
 
 s32 sdkPureSetOption(u8 option)
 {
@@ -46,6 +46,11 @@ s32 sdkPureSetOption(u8 option)
 
 	gstPureTradeParam->PureImplementationOption = option;
 	return SDK_OK;
+}
+
+u8 sdkPureGetSecondTapFlag()
+{
+	return gstPureTradeUnionStruct->EMVTradeParam->SecondTap;
 }
 
 s32 sdkPureSetForceOnline(bool bIsForceOnline)
@@ -784,6 +789,7 @@ void sdkPureTransTermDataInit(void)
 	gstPureTradeUnionStruct->GetTransAmtSumRes = sdkPureGetTransAmtSumRes;
 	gstPureTradeUnionStruct->Preprocess = sdkPurePreprocess;
 	gstPureTradeUnionStruct->CheckRestrictAID = sdkPureCheckRestrictAID;
+//	gstPureTradeUnionStruct->Presecondtap = sdkPurePreOnlineProcess;
 }
 
 
@@ -871,7 +877,7 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 		{
 			if(gstPureTradeParam->CurProcessIndicator == TRANS_ONLINE_RESPONSE)
 			{
-				if(!gstPureTradeParam->SecondTap)
+				if(gstPureTradeParam->SecondTap == 0) //no additional tap
 				{
 					unsigned char respCode[2];
 					sdkEMVBaseReadTLV("\x8A", respCode, &len);
@@ -888,6 +894,7 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 			ErrorType = 2;
 			if(!sdkEMVBaseCheckTagExit("\x9F\x02") || !sdkEMVBaseCheckTagExit("\x5F\x2A") || !sdkEMVBaseCheckTagExit("\x9F\x37"))
 			{
+				Trace("pure-info:", "9F02 or 5F2A or 9F37 missing\r\n");
 				tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
 			}
 		}
@@ -938,10 +945,10 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 
 	if(0 != tempApp_UnionStruct->EMVTradeParam->Error)
 	{
-		if(gstPureTradeParam->SecondTap)
-		{
-			tempApp_UnionStruct->EMVTradeParam->Error = 0;
-		}
+//		if(gstPureTradeParam->SecondTap)
+//		{
+//			tempApp_UnionStruct->EMVTradeParam->Error = 0;
+//		}
 		goto _K2P6;
 	}
 
@@ -1074,8 +1081,8 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 		//Online authorization response processing
 		tempApp_UnionStruct->EMVTradeParam->CurProcessIndicator = TRANS_ONLINE_RESPONSE;
 
-		Trace("pure-info:", "kernel support 2nd tap = %d\r\n", (KerCap[2]&0x80));
-		Trace("pure-info:", "kernel support long tap = %d\r\n", (KerCap[2]&0x10));
+		Trace("pure-info:", "kernel support 2nd tap = %02X\r\n", (KerCap[2]&0x80));
+		Trace("pure-info:", "kernel support long tap = %02X\r\n", (KerCap[2]&0x10));
 
 		if(((KerCap[2]&0x80) == 0) && ((KerCap[2]&0x10) == 0))
 		{
@@ -1085,6 +1092,7 @@ s32 sdkPureTransactionInit(PURETradeUnionStruct *tempApp_UnionStruct)
 		{
 			if(0 == tempApp_UnionStruct->EMVTradeParam->EchoTransIndicator)
 			{
+				Trace("pure-info:", "FCIDifferFlag = %d\r\n", tempApp_UnionStruct->EMVTradeParam->FCIDifferFlag);
 				if(tempApp_UnionStruct->EMVTradeParam->FCIDifferFlag)
 				{
 					tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator = 3;
@@ -1193,15 +1201,15 @@ s32 sdkPureInitialApp(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 //		return SDK_EMV_SwitchInterface;
 //	}
 
-	rlt = sdkPureTransactionInit(gstPureTradeUnionStruct);
-	if(gstPureTradeParam->EchoTransIndicator == 1)
-	{
-		return rlt;
-	}
-	if(SDK_OK != rlt)
-	{
-		return rlt;
-	}
+//	rlt = sdkPureTransactionInit(gstPureTradeUnionStruct);
+//	if(gstPureTradeParam->EchoTransIndicator == 1)
+//	{
+//		return rlt;
+//	}
+//	if(SDK_OK != rlt)
+//	{
+//		return rlt;
+//	}
 
     retCode = pure_InitialApp(gstPureTradeUnionStruct);
     Trace("emv", "SDK-info: pure_InitialApp retCode = %02d\r\n", retCode);
@@ -2001,6 +2009,354 @@ s32 sdkPureGetLibVersion(u8 *version)
 	return SDK_OK;
 }
 
+u8 sdkPurePreOnlineProcess()
+{
+//	s32 ret, len;
+//	u8 retCode;
+//	u8 Implement = tempApp_UnionStruct->EMVTradeParam->PureImplementationOption;
+//	u8 TransType = tempApp_UnionStruct->EMVTradeParam->CurTransType;
+//	u8 ComProbIndicator = tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator;
+//	u8 CLPreProcessIndicator = tempApp_UnionStruct->EMVTradeParam->PreprcessIndicator;
+//	u8 KerCap[5]={0}, TTPI[5]={0};
+//	u8 FCIFlag = tempApp_UnionStruct->EMVTradeParam->FCIParseErrorFlag;
+//	u8 ErrorType=0;
+	s32 ret = SDK_OK;
+	u8 retCode;
+
+	if((!sdkEMVBaseCheckTagExit("\x91")) && (!sdkEMVBaseCheckTagExit("\x71")) && (!sdkEMVBaseCheckTagExit("\x72")))
+	{
+		Trace("pure-info:", "Tag 91 or 71 or 72 missing\r\n");
+		sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+		sdkSendOutcome();
+		ret = SDK_EMV_TransTerminate;
+	}
+
+	sdkEMVBaseRltToSdkRlt(retCode, &ret);
+	Trace("emv", "sdkPureInitialApp ret = %02d\r\n", retCode);
+	return retCode;
+
+//	Trace("pure-info:", "CLPreProcessIndicator = %02X\n", CLPreProcessIndicator);
+//	Trace("pure-info:", "Implement = %02X\n", Implement);
+//	Trace("pure-info:", "TransType = %02X\n", TransType);
+//	Trace("pure-info:", "FCIParseErrorFlag = %d\n", FCIFlag);
+//
+//	//section 9.2.2.3
+//	Trace("pure-info:", "section 9.2.2.3\r\n");
+//	Trace("pure-info:", "Error = %d\n", tempApp_UnionStruct->EMVTradeParam->Error);
+//
+//	if(tempApp_UnionStruct->EMVTradeParam->Error == 0)
+//	{
+//		if(sdkEMVBaseCheckTagExit("\x8A"))
+//		{
+//			if(gstPureTradeParam->CurProcessIndicator == TRANS_ONLINE_RESPONSE)
+//			{
+//				if(gstPureTradeParam->SecondTap == 0) //no additional tap
+//				{
+//					unsigned char respCode[2];
+//					sdkEMVBaseReadTLV("\x8A", respCode, &len);
+//					if(!memcmp(respCode, "\x30\x30", 2))
+//					{
+//						return SDK_EMV_TransOnlineApprove;
+//					}
+//					else if(!memcmp(respCode, "\x30\x35", 2))
+//					{
+//						return SDK_EMV_TransOnlineDecline;
+//					}
+//				}
+//			}
+//			ErrorType = 2;
+//			if(!sdkEMVBaseCheckTagExit("\x9F\x02") || !sdkEMVBaseCheckTagExit("\x5F\x2A") || !sdkEMVBaseCheckTagExit("\x9F\x37"))
+//			{
+//				Trace("pure-info:", "9F02 or 5F2A or 9F37 missing\r\n");
+//				tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//			}
+//		}
+//		else
+//		{
+//			ErrorType = 1;
+//			if(!sdkEMVBaseCheckTagExit("\x9C"))
+//			{
+//				Trace("pure-info:", "Error flag2\r\n");
+//				tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//			}
+//			else
+//			{
+//				if((Implement & 0x80) && (PURE_TRANS_RETRIEVE_GETDATA == TransType))
+//				{
+//					if((0 != FCIFlag) || (NULL == gstPureMemSlotReadTemp))
+//					{
+//						Trace("pure-info:", "Error flag3\r\n");
+//						tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//					}
+//				}
+//				else if((Implement & 0x40) && (TransType == PURE_TRANS_UPDATE_PUTDATA))
+//				{
+//					if((0 != tempApp_UnionStruct->EMVTradeParam->FCIParseErrorFlag) || (NULL == gstPureMemSlotUpdateTemp))
+//					{
+//						Trace("pure-info:", "Error flag4\r\n");
+//						tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//					}
+//				}
+//				else if((Implement & 0x10) && (TransType == PURE_TRANS_APPAUTHTRANS))
+//				{
+//					if((0 != tempApp_UnionStruct->EMVTradeParam->FCIParseErrorFlag) || !sdkEMVBaseCheckTagExit("\x9F\x37"))
+//					{
+//						Trace("pure-info:", "Error flag5\r\n");
+//						tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//					}
+//				}
+//				else
+//				{
+//					if(!sdkEMVBaseCheckTagExit("\x9F\x02") || !sdkEMVBaseCheckTagExit("\x5F\x2A") || !sdkEMVBaseCheckTagExit("\x9F\x37") || !sdkEMVBaseCheckTagExit("\x9F\x1A") || !sdkEMVBaseCheckTagExit("\x9A"))
+//					{
+//						tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//	if(0 != tempApp_UnionStruct->EMVTradeParam->Error)
+//	{
+////		if(gstPureTradeParam->SecondTap)
+////		{
+////			tempApp_UnionStruct->EMVTradeParam->Error = 0;
+////		}
+//		goto _K2P6;
+//	}
+//
+//	//section 9.2.2.4
+//	Trace("pure-info:", "section 9.2.2.4\r\n");
+//	if((Implement & 0x40))
+//	{
+//		Trace("pure-info:", "Implement 2 Support,Init Data Elements Update Result\r\n");
+//		sdkEMVBaseConfigTLV("\x9F\x74", "\x00\x00", 2);
+//	}
+//	if((Implement & 0x80))
+//	{
+//		Trace("pure-info:", "Implement 1 Support,Init GD DOL Result\r\n");
+//		if(NULL == gstPureGDDOLResBuf)
+//		{
+//			gstPureGDDOLResBuf = (u8 *)sdkGetMem(512);
+//		}
+//		memset(gstPureGDDOLResBuf, 0, 512);
+//	}
+//
+//	Trace("pure-info:", "FCIFlag = %d\r\n", FCIFlag);
+//	if(2 != FCIFlag)
+//	{
+//		if(1 == FCIFlag)	//If the FCI does not parse correctly
+//		{
+//			tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//		}
+//		else
+//		{
+//			//3-If "Echo Card Identifier" ("9F75") is part of FCI And "ECHO Command supported" Indicator in "Kernel Transaction Database" is equal to "01" And the FCI in dynamic transaction parameters is equal to the FCI currently present in "Kernel Transaction Database" And "Communication Problem" Indicator in "Kernel Transaction Database" is not equal to "00" And Transaction Type ≠ Trans_Type_Auth_Appli when Implementation option 4 is supported (IO_Option4 = 1)
+//			if(sdkEMVBaseCheckTagExit("\x9F\x75") && (0x01 == tempApp_UnionStruct->EMVTradeParam->ECHOCommandSupport) && (0 == tempApp_UnionStruct->EMVTradeParam->FCIDifferFlag) && (0 != ComProbIndicator) && (Implement & 0x10) && (TransType != PURE_TRANS_APPAUTHTRANS))
+//			{
+//				Trace("pure-info:", "Card and Term all support ECHO Torn Recover\r\n");
+//				if((sdkEMVBaseCheckTagExit("\x8A") && (0x02 == ComProbIndicator)) || (!sdkEMVBaseCheckTagExit("\x8A") && (0x01 == ComProbIndicator)))
+//				{
+//					Trace("pure-info:", "Goto Deal ECHO Torn Recover\r\n");
+//					retCode = pure_TronECHOProcess(tempApp_UnionStruct);
+//					if(retCode == PURE_ERR_READCARDAGAIN)
+//					{
+//						return SDK_EMV_ReadCardAgain;
+//					}
+//					else if(retCode == RLT_ERR_EMV_IccReturn)
+//					{
+//
+//					}
+//					else
+//					{
+//						//FIXME:just personal think,when retcode = RLT_EMV_OK
+//						tempApp_UnionStruct->EMVTradeParam->CurProcessIndicator = TRANS_TORN_RECOVERGAC;
+//					}
+//				}
+//			}
+//
+//			sdkEMVBaseReadTLV("\xDF\x83\x08", KerCap, &len);
+//			TraceHex("pure-info:", "KerCap", KerCap, len);
+//			//3-If Authorization Response Code (tag ‘8A’) is not present in Dynamic Transaction Parameters And ‘Echo Transaction’ Indicator = 0 ‘normal transaction
+//			if(!sdkEMVBaseCheckTagExit("\x8A") && (tempApp_UnionStruct->EMVTradeParam->EchoTransIndicator == 0))
+//			{
+//				TTPI[0] = KerCap[0];
+//				if(CLPreProcessIndicator & 0x10)
+//				{
+//					TTPI[1] |= 0x80;
+//				}
+//				if(CLPreProcessIndicator & 0x20)
+//				{
+//					TTPI[1] |= 0x40;
+//				}
+//				if(CLPreProcessIndicator & 0x80)
+//				{
+//					TTPI[1] |= 0x20;
+//				}
+//				if(CLPreProcessIndicator & 0x40)
+//				{
+//					TTPI[1] |= 0x10;
+//				}
+//				if(KerCap[3] & 0x01)
+//				{
+//					TTPI[1] |= 0x04;
+//				}
+//				if(KerCap[2] & 0x80)
+//				{
+//					TTPI[2] |= 0x80;
+//				}
+//				if(KerCap[2] & 0x40)
+//				{
+//					TTPI[2] |= 0x40;
+//				}
+//				if(KerCap[2] & 0x20)
+//				{
+//					TTPI[2] |= 0x20;
+//				}
+//				TTPI[4] = KerCap[4];
+//				TraceHex("pure-info:", "TTPI", TTPI, 5);
+//				sdkEMVBaseConfigTLV("\xC7", TTPI, 5);
+//				tempApp_UnionStruct->EMVTradeParam->OfflineCAMSelectedIndicator = 0;
+//				sdkEMVBaseConfigTLV("\x95", "\x80\x00\x00\x00\x00", 5);
+//				tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator = 0;
+//
+//				if(sdkEMVBaseCheckTagExit("\x9F\x75") && (TTPI[2] & 0x20))
+//				{
+//					tempApp_UnionStruct->EMVTradeParam->ECHOCommandSupport = 1;
+//				}
+//				else
+//				{
+//					tempApp_UnionStruct->EMVTradeParam->ECHOCommandSupport = 0;
+//				}
+//
+//				if(CLPreProcessIndicator & 0x10)
+//				{
+//					sdkEMVBaseConfigTLV("\x95", "\x80\x00\x00\x80\x00", 5);
+//				}
+//			}
+//		}
+//	}
+//	else
+//	{
+//		if(((!sdkEMVBaseCheckTagExit("\x91")) && (!sdkEMVBaseCheckTagExit("\x71")) && (!sdkEMVBaseCheckTagExit("\x72"))) || ((KerCap[2] & 0x10) == 0))
+//		{
+//			Trace("pure-info:", "Error flag1\r\n");
+//			tempApp_UnionStruct->EMVTradeParam->Error = ErrorType;
+//		}
+//	}
+//
+//	//section 9.2.2.5
+//	Trace("pure-info:", "section 9.2.2.5\r\n");
+//	Trace("pure-info:", "Error = %d\r\n", tempApp_UnionStruct->EMVTradeParam->Error);
+//	Trace("pure-info:", "8A exist = %d\r\n", sdkEMVBaseCheckTagExit("\x8A"));
+//	if((tempApp_UnionStruct->EMVTradeParam->Error == 0) && (true == sdkEMVBaseCheckTagExit("\x8A")))
+//	{
+//		//Online authorization response processing
+//		tempApp_UnionStruct->EMVTradeParam->CurProcessIndicator = TRANS_ONLINE_RESPONSE;
+//
+//		Trace("pure-info:", "kernel support 2nd tap = %02X\r\n", (KerCap[2]&0x80));
+//		Trace("pure-info:", "kernel support long tap = %02X\r\n", (KerCap[2]&0x10));
+//
+//		if(((KerCap[2]&0x80) == 0) && ((KerCap[2]&0x10) == 0))
+//		{
+//			tempApp_UnionStruct->EMVTradeParam->Error = 2;
+//		}
+//		else
+//		{
+//			if(0 == tempApp_UnionStruct->EMVTradeParam->EchoTransIndicator)
+//			{
+//				Trace("pure-info:", "FCIDifferFlag = %d\r\n", tempApp_UnionStruct->EMVTradeParam->FCIDifferFlag);
+//				if(tempApp_UnionStruct->EMVTradeParam->FCIDifferFlag)
+//				{
+//					tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator = 3;
+//				}
+//				else
+//				{
+//					tempApp_UnionStruct->EMVTradeParam->CommuProblemIndicator = 0;
+//				}
+//			}
+////			return sdkPureOnlineRespProcess(tempApp_UnionStruct);
+//		}
+//	}
+//	else
+//	{
+//		if(tempApp_UnionStruct->EMVTradeParam->Error == 0)
+//		{
+//			if(tempApp_UnionStruct->EMVTradeParam->EchoTransIndicator == 1)
+//			{
+//				retCode = pure_DealTornEchoResponse(gstPureTradeUnionStruct);
+//				sdkEMVBaseRltToSdkRlt(retCode, &ret);
+//				Trace("emv", "pure_DealTornEchoResponse ret = %02d\r\n", ret);
+//				return ret;
+//			}
+//			else
+//			{
+//				if(((Implement & 0x10) == 0) || (TransType != PURE_TRANS_APPAUTHTRANS))
+//				{
+//					//The Dynamic Transactions parameters (‘9F02’, ‘5F2A’, ‘9F1A’, ‘9A’,’9C’ and ‘9F37’) are stored in ‘Kernel Transaction Database
+//				}
+//
+//				if(Implement & 0x80)
+//				{
+//					ret = sdkPureGetDataBeforeGPO(gstsdkPureTradeTable);
+//					if(ret == SDK_EMV_TransTerminate)
+//					{
+//						return ret;
+//					}
+//				}
+//				else
+//				{
+//					if(Implement & 0x40)
+//					{
+//						ret = sdkPurePutDataBeforeGPO(gstsdkPureTradeTable);
+//						if(ret != SDK_OK)
+//						{
+//							return ret;
+//						}
+//					}
+////					else
+////					{
+////						return SDK_OK;	//go to section 9.2.6,deal GPO
+////					}
+//				}
+//			}
+//		}
+//	}
+//
+//_K2P6:
+//	//section 9.2.2.6
+//	Trace("pure-info:", "section 9.2.2.6\r\n");
+//	if(tempApp_UnionStruct->EMVTradeParam->Error == 1)
+//	{
+//		sdkSetOutcomeParam(SDK_OUTCOME_RESULT_SELECTNEXT, SDK_OUTCOME_START_C, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+//		sdkSendOutcome();
+//		return SDK_EMV_AppSelectTryAgain;
+//	}
+//
+//	if(tempApp_UnionStruct->EMVTradeParam->Error == 2)
+//	{
+//		if(sdkEMVBaseCheckTagExit("\x71") || sdkEMVBaseCheckTagExit("\x72"))
+//		{
+//			sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 1, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+//		}
+//		else
+//		{
+//			sdkSetOutcomeParam(SDK_OUTCOME_RESULT_ENDAPPLICATION, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 0, 0, 0, 0, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+//		}
+//		sdkSendOutcome();
+//		return SDK_EMV_TransTerminate;
+//	}
+
+//	return SDK_OK;
+}
+
+
+s32 sdkPureTransFlow2()
+{
+
+
+}
+
 s32 sdkPureTransFlow()
 {
     s32 ret;
@@ -2015,7 +2371,7 @@ s32 sdkPureTransFlow()
 		if(SDK_OK == ret)
 		{
 			#if 1
-			if(gstPureTradeParam->SecondTap)
+			if(gstPureTradeParam->SecondTap != 0)
 			{
 				gPureTransStuatus = SDK_PURE_STATUS_SELECTAID;
 			}
@@ -2063,7 +2419,7 @@ s32 sdkPureTransFlow()
 			ret = sdkPureFinalSelectedApp(gstsdkPureTradeTable);
 			if(SDK_OK == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_GPO;
+				gPureTransStuatus = SDK_PURE_STATUS_TRANSINIT;
 				return EMV_STA_APP_SELECTED;
 			}
 			else if(PURE_REQ_LOADAIDPARAM == ret)
@@ -2100,13 +2456,68 @@ s32 sdkPureTransFlow()
 				gPureTransStuatus = SDK_PURE_STATUS_PPSE;
 				return AS_ERR;
 			}
-
-		case SDK_PURE_STATUS_GPO:
-			ret = sdkPureInitialApp(gstsdkPureTradeTable);
+		case SDK_PURE_STATUS_TRANSINIT:
+			ret = sdkPureTransactionInit(gstPureTradeUnionStruct);
 			if(gstPureTradeParam->EchoTransIndicator == 1)
 			{
 				goto _DEALAFTERECHO;
 			}
+			if(SDK_OK == ret)
+			{
+				gPureTransStuatus = SDK_PURE_STATUS_GPO;
+			}
+			else if(SDK_EMV_ReadCardAgain == ret || SDK_EMV_TransTryAgain == ret || SDK_EMV_TORN == ret)
+			{
+				gPureTransStuatus = SDK_PURE_STATUS_PPSE;
+				return EMV_REQ_READCAARD_AGAIN;
+			}
+			else if(SDK_EMV_AppSelectTryAgain == ret)
+			{
+				gPureTransStuatus = SDK_PURE_STATUS_DIFFEREMVBASE;
+				return EMV_REQ_SELECT_NEXT;
+			}
+			else if(SDK_EMV_SwitchInterface == ret)
+			{
+				return EMV_SWITCH_INTERFACE;
+			}
+			else if(SDK_PARA_ERR == ret)
+			{
+				gPureTransStuatus = SDK_PURE_STATUS_PPSE;
+				return EMV_UNINITIALIZED;
+			}
+			else if(SDK_EMV_TransTerminate == ret)
+			{
+				return EMV_ENDAPPLICATION;
+			}
+			else
+			{
+				if(SDK_EMV_TORN == ret)
+				{
+					gPureTransStuatus = SDK_PURE_STATUS_PPSE;
+					return EMV_REQ_READCAARD_AGAIN;
+				}
+				else if(SDK_EMV_TransOnlineApprove == ret)
+				{
+					return EMV_ACCEPTED_ONLINE;
+				}
+				else if(SDK_EMV_TransOnlineDecline == ret)
+				{
+					return EMV_DENIALED_ONLINE;
+				}
+				else if(SDK_EMV_TransOfflineDecline == ret)
+				{
+					return EMV_DENIALED_OFFLINE;
+				}
+				gPureTransStuatus = SDK_PURE_STATUS_PPSE;
+				return IA_ERR;
+			}
+
+		case SDK_PURE_STATUS_GPO:
+			ret = sdkPureInitialApp(gstsdkPureTradeTable);
+//			if(gstPureTradeParam->EchoTransIndicator == 1)
+//			{
+//				goto _DEALAFTERECHO;
+//			}
 			if(SDK_OK == ret)
 			{
 				if(gstPureTradeUnionStruct->EMVTradeParam->PureImplementationOption & 0x40)
@@ -2432,7 +2843,7 @@ _DEALAFTERECHO:
 		case SDK_PURE_STATUS_KERNEL_DEACTIVATE:
 			ret = sdkPureKernelDeactivate(gstsdkPureTradeTable);
 
-#if 1
+#if 0
 				TraceHex("test", "cur select aid", gstPureTradeUnionStruct->EMVTradeParam->SelectedApp->AID, gstPureTradeUnionStruct->EMVTradeParam->SelectedApp->AIDLen);
 				if(!memcmp(gstPureTradeUnionStruct->EMVTradeParam->SelectedApp->AID, "\xA0\x00\x00\x02\x80\x20\x10", 7))
 				{
@@ -2453,9 +2864,17 @@ _DEALAFTERECHO:
 					gPureTransStuatus = SDK_PURE_STATUS_TRANSPROCESS;
 					return EMV_REQ_ONLINE_PIN;
 				}
-				gPureTransStuatus = SDK_PURE_STATUS_GPO;
+				gPureTransStuatus = SDK_PURE_STATUS_TRANSINIT;
 				gstPureTradeParam->CurProcessIndicator = TRANS_ONLINE_RESPONSE;
-				if(gstPureTradeParam->SecondTap)
+//				if(gstPureTradeParam->SecondTap == 2 || gstPureTradeParam->SecondTap == 1)
+//				{
+//					ret = sdkPurePreOnlineProcess(gstsdkPureTradeTable);
+//					if(ret != SDK_OK)
+//					{
+//						return EMV_ENDAPPLICATION;
+//					}
+//				}
+				if(gstPureTradeParam->SecondTap == 2)
 				{
 					gPureTransStuatus = SDK_PURE_STATUS_SELECTAID;
 					return EMV_REQ_SECONDTAP;
@@ -2473,7 +2892,7 @@ _DEALAFTERECHO:
 			}
 			else if(SDK_EMV_TransTerminate == ret)
 			{
-				return EMV_REQ_GO_ONLINE;
+				return EMV_ENDAPPLICATION;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)
 			{
@@ -2508,7 +2927,7 @@ _DEALAFTERECHO:
 			}
 			else if(SDK_EMV_TransTerminate == ret)
 			{
-				return EMV_REQ_GO_ONLINE;
+				return EMV_ENDAPPLICATION;
 			}
 			else if(SDK_EMV_SwitchInterface == ret)
 			{

@@ -593,7 +593,7 @@ int sdkIccPowerOnAndSeek()
 
 	memset(buf, 0, sizeof(buf));
 	ret = ddi_icc_read_card_status(SLOT_RF_CARD, buf);
-	Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
+//	Trace("ddi", "ddi_icc_read_card_status get card status: %02X\r\n", buf[1]);
 //		Trace("ddi", "ddi_icc_read_card_status ret: %d\r\n", ret);
 
 	if(buf[1] == 0x00)	//No card
@@ -979,8 +979,8 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, s1
 {
     s32 ret = 0,rslt = 0;
 	u32 size = 512;
-	static long timerid = 0;
-	long timerid2 = 0;
+//	static long timerid = 0;
+//	long timerid2 = 0;
 	u16 outBufLen = 0;
 
     if((NULL == pheInBuf) || (NULL == pheOutBuf) || (NULL == psiOutLen) || siInLen < 0)
@@ -988,30 +988,29 @@ s32 sdkDevContactlessSendAPDU(const u8 *pheInBuf, u16 siInLen, u8 *pheOutBuf, s1
         return SDK_PARA_ERR;
     }
 
-	if((0 == memcmp(pheInBuf,"\x00\xA4\x04\x00\x0E\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31\x00",( ( (u16)(siInLen) ) > 18 ? 18 : ( (u16)(siInLen) ) ) ) ) )
-    {
-        timerid = sdkTimerGetId();
-    }
+//	if((0 == memcmp(pheInBuf,"\x00\xA4\x04\x00\x0E\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31\x00",( ( (u16)(siInLen) ) > 18 ? 18 : ( (u16)(siInLen) ) ) ) ) )
+//    {
+//        timerid = sdkTimerGetId();
+//    }
 
 	TraceHex("apdu", "pheInBuf:", pheInBuf, siInLen);
 #if 1
 	ret = ddi_icc_trans_apdu(CARD_TYPE_CLCPU, pheInBuf, siInLen, pheOutBuf, &outBufLen);
 	Trace("extern", "ddi_icc_trans_apdu ret = %d\r\n", ret);
-	timerid2 = sdkTimerGetId();
+//	timerid2 = sdkTimerGetId();
 
-	if(timerid != 0 && (timerid2 - timerid > 1000))
-	{
+//	if(timerid != 0 && (timerid2 - timerid > 1000))
+//	{
 		rslt = DetecteOther();
 		Trace("lishiyao", "DetecteOther ret = %d\r\n", rslt);
-		Trace("lishiyao", "ddi_rf_exchange_apdu ret = %d\r\n", ret);
 		if(rslt == SDK_EQU)
 		{
 			*psiOutLen = -1;
 			return SDK_ERR;
 		}
-	}
+//	}
 
-	Trace("extern", "ddi_icc_trans_apdu ret = %d\r\n", ret);
+//	Trace("extern", "ddi_icc_trans_apdu ret = %d\r\n", ret);
 #else
     while(1)
     {
@@ -1118,6 +1117,9 @@ s32 sdkReadFile(const u8 *pasFile, u8 *pheDest, s32 siOffset, s32 *psiDestlen)
         return SDK_PARA_ERR;
     }
 
+//	Trace("test", "want read byte: %d\r\n", *psiDestlen);
+//
+//	Trace("test", "want open file: %s\r\n", pasFile);
 	fp = fopen(pasFile, "rb");
 	if(fp == NULL)
 	{
@@ -1132,6 +1134,9 @@ s32 sdkReadFile(const u8 *pasFile, u8 *pheDest, s32 siOffset, s32 *psiDestlen)
 
 	i = *psiDestlen;
 	*psiDestlen = fread(pheDest, sizeof(u8), i, fp);
+//	Trace("test", "read byte: %d\r\n", *psiDestlen);
+//	Trace("test", "want read byte: %d\r\n", i);
+//	TraceHex("test", "read content", pheDest, *psiDestlen);
 	if(*psiDestlen != i)
 	{
 		fclose(fp);

@@ -22,6 +22,7 @@
 #include "sdkemvbase.h"
 #include "sdkkey.h"
 #include "sdkmmi.h"
+#include "sdkped.h"
 
 #ifdef assert
 #undef  assert

@@ -111,17 +111,32 @@ u8 *TlvVPtr(u8 *aTLV)
 u8 *TlvSeek(u8 *aTlvList, unsigned short aLen, unsigned int aTag)
 {
     u8 *pb;
+	u32 tmp;
 
     if (aTlvList == NULL) { return NULL; }
     pb = aTlvList;
 
+//	Trace("test", "input  aLen = %d\r\n", aLen);
+//	Trace("test", "pb = %02X\r\n", *pb);
+
     while (pb < aTlvList + aLen)
     {
-        if (TlvTag(pb) == aTag)
+		tmp = TlvTag(pb);
+//		Trace("test", "tmp = %d\r\n", tmp);
+        if (tmp == aTag)
         {
             return pb;
         }
+
+//		Trace("test", "TlvTSize = %d\r\n", TlvTSize(pb));
+//		Trace("test", "TlvLSize = %d\r\n", TlvLSize(pb));
+//		Trace("test", "TlvLen = %d\r\n", TlvLen(pb));
+
         pb += TlvTSize(pb) + TlvLSize(pb) + TlvLen(pb);
+
+//		Trace("test", "pb = %02X\r\n", *pb);
+//		Trace("test", "pb = %p\r\n", pb);
+//		Trace("test", "aTlvList = %p\r\n", aTlvList);
     }
 
     return NULL;
@@ -133,7 +148,11 @@ u16 TlvSeekSame(u8 *aTlvList, u16 aLen, u32 aTag, u8 *pout)
     u8 *pb;
     u16 offset = 0, taglen = 0, buflen = 0;
 
-    if (aTlvList == NULL) { return 0; }
+    if (aTlvList == NULL)
+	{
+		Trace("test", "return 0 flag1\r\n");
+		return 0;
+	}
     pb = aTlvList;
 
     while(pb < aTlvList + aLen)
@@ -153,6 +172,7 @@ u16 TlvSeekSame(u8 *aTlvList, u16 aLen, u32 aTag, u8 *pout)
         pb += TlvTSize(pb) + TlvLSize(pb) + TlvLen(pb);
     }
 
+	Trace("test", "return 0 flag2\r\n");
     return 0;
 }
 
@@ -2453,11 +2473,11 @@ s32 BCTCSendICCBase(u8 MsgType)
 {
     u8 *ComPackSend, ComPackRecv[512];
     s32 ComPackSendLen = 0, ComPackRecvLen = 0, VarReadLen = 0;
-    s32 len = 0, heIssuerAuthDatalen = 0;
+    s32 len = 0, heIssuerAuthDatalen = 0,scriptlen;
     u8 POSEntryMode = MAG_NO_IC;
     u8 *VarRead;
     u8 *heScript;
-    u8 *pb, *pbTlv;
+    u8 *pb, *pbTlv, *pbv,*pbChild;
     u16 TlvLength = 0;
     u16 rsplen = 0;
     u16 Script71Len = 0, Script72Len = 0;
@@ -2650,6 +2670,19 @@ s32 BCTCSendICCBase(u8 MsgType)
 
     if(TlvLength >= 3)
     {
+        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0xDF8139);
+        if(pbTlv != NULL)
+        {
+            rsplen = TlvLen(pbTlv);
+            if(rsplen != 1)
+            {
+                return SDK_ERR;
+            }
+            pb = TlvVPtr(pbTlv);
+            Trace("lishiyao", "Host online status: %d\r\n", *pb);
+			HostOnlineStatus = *pb;
+		}
+
         pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0x8A);
 
         if(pbTlv != NULL)
@@ -2691,44 +2724,153 @@ s32 BCTCSendICCBase(u8 MsgType)
 			TraceHex("BCTC", "Issuer Auth Data", gstheIssuerAuthData, gstheIssuerAuthDataLen);
 		}
 
-        pTempScript71 = (u8*)sdkGetMem(256);
-
-        if(pTempScript71 == NULL)
+        pbTlv = TlvSeek(&ComPackRecv[4], TlvLength, 0xDF8138);
+        if(pbTlv != NULL)
         {
-            return SDK_ERR;
-        }
-        memset(pTempScript71, 0, 256);
-        Script71Len = TlvSeekSame(&ComPackRecv[4], TlvLength, 0x71, pTempScript71);
-		Trace("BCTC", "Script71Len = %d\r\n", Script71Len);
+			pTempScript71 = (u8*)sdkGetMem(256);
+			if(pTempScript71 == NULL)
+			{
+				return SDK_ERR;
+			}
+			memset(pTempScript71, 0, 256);
 
-        TraceHex("", "pTempScript71", pTempScript71, Script71Len);
+			scriptlen = TlvLen(pbTlv);
+			Trace("BCTC", "DF8138 len = %d\r\n", scriptlen);
 
-        pTempScript72 = (u8*)sdkGetMem(256);
+			if(scriptlen <= 127 && scriptlen > 0)
+			{
+				pbChild = TlvSeek(pbTlv+3+1, scriptlen, 0x71);
+				TraceHex("BCTC", "DF8138 Script", pbTlv, scriptlen+4);
+			}
+			else if(scriptlen > 127 && scriptlen <= 255)
+			{
+				pbChild = TlvSeek(pbTlv+3+2, scriptlen, 0x71);
+				TraceHex("BCTC", "DF8138 Script", pbTlv, scriptlen+5);
+			}
+			else
+			{
+				pbChild = TlvSeek(pbTlv+3+3, scriptlen, 0x71);
+				TraceHex("BCTC", "DF8138 Script", pbTlv, scriptlen+6);
+			}
 
-        if(pTempScript72 == NULL)
-        {
-            sdkFreeMem(pTempScript71);
-            return SDK_ERR;
-        }
-        memset(pTempScript72, 0, 256);
-        Script72Len = TlvSeekSame(&ComPackRecv[4], TlvLength, 0x72, pTempScript72);
+//			pbChild = TlvSeek(pbTlv, len, 0x71);
+			Trace("BCTC", "tag 71 pointer = %p\r\n", pbChild);
+			if(pbChild != NULL)
+			{
+//				len = TlvLen(pbChild);
+//				pbv = TlvVPtr(pbChild);
+				len = *(pbChild+1);
+				pbv = pbChild + 2;
+				if(len > 256)
+				{
+					len = 256;
+				}
+				Script71Len = len;
+				memcpy(pTempScript71, pbv, Script71Len);
+			}
 
-        TraceHex("", "pTempScript72", pTempScript72, Script72Len);
 
-		gstheIssuerScriptLen = 0;
-        if(Script71Len > 0)
-        {
-	        memcpy(gstheIssuerScriptData+gstheIssuerScriptLen, pTempScript71, Script71Len);
-			gstheIssuerScriptLen += Script71Len;
-			sdkEMVBaseConfigTLV("\x71", pTempScript71, Script71Len);
-        }
+//			Script71Len = TlvSeekSame(pbTlv, len, 0x71, pTempScript71);
+			Trace("BCTC", "Script71Len = %d\r\n", Script71Len);
+			TraceHex("", "pTempScript71", pTempScript71, Script71Len);
 
-        if(Script72Len > 0)
-        {
-			memcpy(gstheIssuerScriptData+gstheIssuerScriptLen, pTempScript72, Script72Len);
-			gstheIssuerScriptLen += Script72Len;
-			sdkEMVBaseConfigTLV("\x72", pTempScript72, Script72Len);
-        }
+			pTempScript72 = (u8*)sdkGetMem(256);
+
+			if(pTempScript72 == NULL)
+			{
+				sdkFreeMem(pTempScript71);
+				return SDK_ERR;
+			}
+
+			memset(pTempScript72, 0, 256);
+			if(scriptlen <= 127 && scriptlen > 0)
+			{
+				pbChild = TlvSeek(pbTlv+3+1, scriptlen, 0x72);
+			}
+			else if(scriptlen > 127 && scriptlen <= 255)
+			{
+				pbChild = TlvSeek(pbTlv+3+2, scriptlen, 0x72);
+			}
+			else
+			{
+				pbChild = TlvSeek(pbTlv+3+3, scriptlen, 0x72);
+			}
+//			pbChild = TlvSeek(pbTlv, len, 0x72);
+			Trace("BCTC", "tag 72 pointer = %p\r\n", pbChild);
+			if(pbChild != NULL)
+			{
+//				len = TlvLen(pbChild);
+//				pbv = TlvVPtr(pbChild);
+
+				len = *(pbChild+1);
+				pbv = pbChild + 2;
+				if(len > 256)
+				{
+					len = 256;
+				}
+				Script72Len = len;
+				memcpy(pTempScript72, pbv, Script72Len);
+			}
+
+//			Script72Len = TlvSeekSame(pbTlv, len, 0x72, pTempScript72);
+			TraceHex("", "pTempScript72", pTempScript72, Script72Len);
+
+			gstheIssuerScriptLen = 0;
+			if(Script71Len > 0)
+			{
+				memcpy(gstheIssuerScriptData+gstheIssuerScriptLen, pTempScript71, Script71Len);
+				gstheIssuerScriptLen += Script71Len;
+				sdkEMVBaseConfigTLV("\x71", pTempScript71, Script71Len);
+			}
+
+			if(Script72Len > 0)
+			{
+				memcpy(gstheIssuerScriptData+gstheIssuerScriptLen, pTempScript72, Script72Len);
+				gstheIssuerScriptLen += Script72Len;
+				sdkEMVBaseConfigTLV("\x72", pTempScript72, Script72Len);
+			}
+
+
+		}
+
+//        pTempScript71 = (u8*)sdkGetMem(256);
+//
+//        if(pTempScript71 == NULL)
+//        {
+//            return SDK_ERR;
+//        }
+//        memset(pTempScript71, 0, 256);
+//        Script71Len = TlvSeekSame(&ComPackRecv[4], TlvLength, 0x71, pTempScript71);
+//		Trace("BCTC", "Script71Len = %d\r\n", Script71Len);
+//
+//        TraceHex("", "pTempScript71", pTempScript71, Script71Len);
+//
+//        pTempScript72 = (u8*)sdkGetMem(256);
+//
+//        if(pTempScript72 == NULL)
+//        {
+//            sdkFreeMem(pTempScript71);
+//            return SDK_ERR;
+//        }
+//        memset(pTempScript72, 0, 256);
+//        Script72Len = TlvSeekSame(&ComPackRecv[4], TlvLength, 0x72, pTempScript72);
+//
+//        TraceHex("", "pTempScript72", pTempScript72, Script72Len);
+//
+//		gstheIssuerScriptLen = 0;
+//        if(Script71Len > 0)
+//        {
+//	        memcpy(gstheIssuerScriptData+gstheIssuerScriptLen, pTempScript71, Script71Len);
+//			gstheIssuerScriptLen += Script71Len;
+//			sdkEMVBaseConfigTLV("\x71", pTempScript71, Script71Len);
+//        }
+//
+//        if(Script72Len > 0)
+//        {
+//			memcpy(gstheIssuerScriptData+gstheIssuerScriptLen, pTempScript72, Script72Len);
+//			gstheIssuerScriptLen += Script72Len;
+//			sdkEMVBaseConfigTLV("\x72", pTempScript72, Script72Len);
+//        }
 	}
 
 	if(pTempScript71)

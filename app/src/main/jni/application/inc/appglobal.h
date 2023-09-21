@@ -57,6 +57,7 @@ EXTERN u8 TermInfobReversal;
 
 EXTERN u8 gDispSeePhone;//zwb 170509
 EXTERN u8 gDispSecondTap;//zwb 170509
+EXTERN u8 HostOnlineStatus;//zwb 170509
 
 EXTERN unsigned char gJCBPaperNum;
 

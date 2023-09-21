@@ -1276,9 +1276,9 @@ s32 sdkEMVBaseGetAnyAIDList(s32 siStartIndex, s32 siAIDNum, SDK_EMVBASE_AID_STRU
         {
             if(j >= siStartIndex)
             {
-//                addr = ((u32)i) << EMVBASEAIDSHIFTNUM;
+                addr = ((u32)i) << EMVBASEAIDSHIFTNUM;
                 tmplen = EMVBASEAIDLEN;
-				addr = i * sizeof(EMVBASE_AID_STRUCT);
+//				addr = i * sizeof(EMVBASE_AID_STRUCT);
                 ret = sdkReadFile(fn, tmp, addr, &tmplen);
 
                 if(ret != SDK_OK)
@@ -1492,12 +1492,12 @@ s32 sdkEMVBaseLoadAIDList(void)
     sdkSysGetCurAppDir(fn);
     strcat(fn, SDK_EMVBASE_AID_FILENALE);
 
-	ret = sdkGetFileSize(fn);
-//	Trace("emv", "Get AID File ret = %d\r\n", ret);
-	if(ret == 0 || ret == SDK_FUN_NULL)
-	{
-		sdkEMVBaseCreateAIDFile();
-	}
+//	ret = sdkGetFileSize(fn);
+////	Trace("emv", "Get AID File ret = %d\r\n", ret);
+//	if(ret == 0 || ret == SDK_FUN_NULL)
+//	{
+//		sdkEMVBaseCreateAIDFile();
+//	}
 
     emvbase_manage_aidindexread(fn);
 
@@ -2380,12 +2380,12 @@ s32 sdkEMVBaseLoadCAPKList(void)
     sdkSysGetCurAppDir(fn);
     strcat(fn, SDK_EMVBASE_CAPK_FILENALE);
 
-	ret = sdkGetFileSize(fn);
-//	Trace("emv", "Get CAPK File ret = %d\r\n", ret);
-	if(ret == 0 || ret == SDK_FUN_NULL)
-	{
-		sdkEMVBaseCreateCAPKFile();
-	}
+//	ret = sdkGetFileSize(fn);
+////	Trace("emv", "Get CAPK File ret = %d\r\n", ret);
+//	if(ret == 0 || ret == SDK_FUN_NULL)
+//	{
+//		sdkEMVBaseCreateCAPKFile();
+//	}
 
     memset(fn, 0, SDK_EMVBASE_MAX_PATH);
     sdkSysGetCurAppDir(fn);
@@ -2502,9 +2502,9 @@ s32 sdkEMVBasePowerStartInit(void)
 {
     sdkEmvBaseInitEMV();
 	sdkEMVBaseLoadAIDList();
-	Trace("emv","goto sdkEMVBaseLoadCAPKList\r\n");
+	Trace("emv","goto sdkEMVBaseLoadAIDList\r\n");
     sdkEMVBaseLoadCAPKList();
-	Trace("emv","goto sdkEMVBaseLoadGMCAPKList\r\n");
+	Trace("emv","goto sdkEMVBaseLoadCAPKList\r\n");
     return SDK_OK;
 }
 

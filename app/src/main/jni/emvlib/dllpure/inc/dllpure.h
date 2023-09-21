@@ -99,10 +99,11 @@ typedef struct
 	unsigned char FCIIn1stSelectLen;
 	unsigned char FCIDifferFlag;		//1-: 1st select FCI and 2nd select FCI content different
 	unsigned char FCIParseErrorFlag;	//0-:FCI template present and parse correct;1-:FCI parse error;2-:FCI dont be obtained
-	unsigned char SecondTap;
+	unsigned char SecondTap;			//0-:no additional tap;1-:long tap;2-:second tap
 	unsigned char RequestOnlinePIN;
 	unsigned char RecoverPKSuccess;
 	unsigned char ODADataChecked;
+	unsigned char IssuerDenialFlag;
 }PURETRADEPARAMETER;;
 
 
@@ -123,6 +124,7 @@ typedef unsigned char(*PURE_CheckCAPKExist)(PURETRADEPARAMETER *EMVTradeParam);
 typedef int(*PURE_GetTransAmtSumRes)(void);
 typedef int(*PURE_Preprocess)(PURETRADEPARAMETER *EMVTradeParam);
 typedef int(*PURE_CheckRestrictAID)(unsigned char *AID, int len);
+//typedef unsigned char(*PURE_PreSecondTap)();
 
 typedef struct{
 
@@ -145,6 +147,7 @@ typedef struct{
 	PURE_GetTransAmtSumRes GetTransAmtSumRes;
 	PURE_Preprocess Preprocess;
 	PURE_CheckRestrictAID CheckRestrictAID;
+//	PURE_PreSecondTap Presecondtap;
 }PURETradeUnionStruct;
 
 typedef struct

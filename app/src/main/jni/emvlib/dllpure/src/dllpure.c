@@ -185,20 +185,20 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequest2ndTap(PUR
 	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ONLINE_TWOPRESENTMENTS, SDK_OUTCOME_START_B, CVM, 1, 1, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, NULL, SDK_OUTCOME_ONLINERESPDATA_EMVDATA);
 	tempApp_UnionStruct->SendOutcome();
 	sdkmSleep(100);
-	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == CVM || SDK_OUTCOME_CVM_NOCVMREQ == CVM)
-	{
-		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
-	}
-	else if(SDK_OUTCOME_CVM_ONLINEPIN == CVM)
+	if(SDK_OUTCOME_CVM_ONLINEPIN == CVM)
 	{
 		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSENTERPIN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
+	}
+	else
+	{
+		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
 	}
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_TRYAGAIN, SDK_UI_STATUS_READYTOREAD, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
 
-	tempApp_UnionStruct->EMVTradeParam->SecondTap = 1;
+	tempApp_UnionStruct->EMVTradeParam->SecondTap = 2;
 
 	EMVBase_Trace("Start pure_Outcome_FinancialTransactionCompleted_OnlineRequest2ndTap\r\n");
 	return RLT_EMV_ONLINE_WAIT;
@@ -211,21 +211,24 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequestLongTap(PU
 
 	emvbase_avl_gettagvalue_spec(EMVTAG_JCBRemovalTimeout, RemovalTimeout, 0, 2);
 
-	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ONLINE_TWOPRESENTMENTS, SDK_OUTCOME_START_B, CVM, 1, 1, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, RemovalTimeout, SDK_OUTCOME_ONLINERESPDATA_ANY);
+	tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_ONLINE_PREMENTANDHOLD, SDK_OUTCOME_START_D, CVM, 1, 1, 1, 1, SDK_OUTCOME_AIP_NA, 0, SDK_OUTCOME_FIELDOFFREQ_NA, RemovalTimeout, SDK_OUTCOME_ONLINERESPDATA_ANY);
 	tempApp_UnionStruct->SendOutcome();
 	sdkmSleep(100);
-	if(SDK_OUTCOME_CVM_OBTAINSIGNATURE == CVM || SDK_OUTCOME_CVM_NOCVMREQ == CVM)
+	if(SDK_OUTCOME_CVM_ONLINEPIN == CVM)
 	{
-		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
+		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSENTERPIN, SDK_UI_STATUS_PROCESSING, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
 	}
-	else if(SDK_OUTCOME_CVM_ONLINEPIN == CVM)
+	else
 	{
-		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PLSENTERPIN, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
+		tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_AUTHORISINGPLSWAIT, SDK_UI_STATUS_PROCESSING, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, NULL, NULL);
 	}
+
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
 	sdkmSleep(100);
 	tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_PROCESSING, SDK_UI_STATUS_PROCESSING, 0, NULL, SDK_UI_VALUEQUALIFIER_NA, NULL, NULL);
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_RESTART);
+
+	tempApp_UnionStruct->EMVTradeParam->SecondTap = 1;
 	EMVBase_Trace("Start pure_Outcome_FinancialTransactionCompleted_OnlineRequestLongTap\r\n");
 	return RLT_EMV_ONLINE_WAIT;
 }
@@ -252,6 +255,8 @@ unsigned char pure_Outcome_FinancialTransactionCompleted_OnlineRequestNoAddition
 	}
 
 	tempApp_UnionStruct->SendUIRequest(PURE_UIREQ_OUTCOME);
+
+	tempApp_UnionStruct->EMVTradeParam->SecondTap = 0;
 	EMVBase_Trace("Start pure_Outcome_FinancialTransactionCompleted_OnlineRequestNoAdditionalTap\r\n");
 	return RLT_EMV_ONLINE_WAIT;
 }
@@ -321,7 +326,7 @@ unsigned char pure_CheckTagExistMTOL(unsigned char *tag, unsigned char tagLen)
 			if(!memcmp(tag, &(itemMTOL->data[i]), tagLen))
 			{
 				EMVBase_TraceHex("PURE-info: MTOL Item", tag, tagLen);
-				return emvbase_avl_checkiftagexist(tag);
+				return 1;
 			}
 		}
 	}
@@ -1874,6 +1879,7 @@ unsigned char pure_ParseAndStoreCardResponse(PURETradeUnionStruct *tempApp_Union
 		}
 		if(pure_CheckTagExistMTOL(tag, tagItemLen) == 1)
 		{
+			EMVBase_Trace("PURE-info: start create unrecognize Tag in MTOL\r\n");
 			index += taglen;
 
 			if(EMVBase_ParseExtLen(DataOut, &index, &len))
@@ -2015,7 +2021,10 @@ unsigned char pure_FinalReadSelectRetData(EMVBASE_SELECT_RET* selectRet, unsigne
 	}
 	else if(TRANS_ONLINE_RESPONSE == CurProcessIndicator || TRANS_TORN_RECOVERGAC == CurProcessIndicator)
 	{
-		if(!memcmp(tempAppUnionStruct->EMVTradeParam->FCIIn1stSelect, &DataOut[index], tempAppUnionStruct->EMVTradeParam->FCIIn1stSelectLen) || (lenFCI != tempAppUnionStruct->EMVTradeParam->FCIIn1stSelectLen))
+    	EMVBase_Trace("PURE-info: This is a online trans or torn recover trans\r\n");
+    	EMVBase_Trace("PURE-info: compare FCI template(Tag6F) len = %d\r\n", lenFCI);
+		EMVBase_TraceHex("PURE-info: compare FCI template(Tag6F)", &DataOut[index], tempAppUnionStruct->EMVTradeParam->FCIIn1stSelectLen);
+		if(memcmp(tempAppUnionStruct->EMVTradeParam->FCIIn1stSelect, &DataOut[index], tempAppUnionStruct->EMVTradeParam->FCIIn1stSelectLen) || (lenFCI != tempAppUnionStruct->EMVTradeParam->FCIIn1stSelectLen))
 		{
 			tempAppUnionStruct->EMVTradeParam->FCIDifferFlag = 1;
 		}
@@ -2414,6 +2423,15 @@ unsigned char pure_FinalSelect(PURETradeUnionStruct *tempApp_UnionStruct)
 			emvbase_avl_setvalue_or(EMVTAG_TVR, 3, 0x80);
 		}
 	}
+
+//	if(TRANS_ONLINE_RESPONSE == tempApp_UnionStruct->EMVTradeParam->CurProcessIndicator && 2 == tempApp_UnionStruct->EMVTradeParam->SecondTap)
+//	{
+//		retCode = tempApp_UnionStruct->Presecondtap();
+//		if(retCode != RLT_EMV_OK)
+//		{
+//			return retCode;
+//		}
+//	}
 
 	EMVBase_TraceHex("pure-info: AID in Command: ", (tempAppAppData + tempselectappno)->AID, (tempAppAppData + tempselectappno)->AIDLen);
     EMVBase_COMMAND_SELECT((tempAppAppData + tempselectappno)->AID, (tempAppAppData + tempselectappno)->AIDLen, 0, &apdu_s);
@@ -3322,9 +3340,9 @@ unsigned char pure_DealAFLData(PURETradeUnionStruct *tempApp_UnionStruct)
 	}
 
 	itemMTOL = emvbase_avl_gettagitempointer(EMVTAG_PUREMTOL);
-	EMVBase_TraceHex("PURE-info: MTOL in kernel", itemMTOL->data, itemMTOL->len);
 	if(itemMTOL != NULL)
 	{
+		EMVBase_TraceHex("PURE-info: MTOL in kernel", itemMTOL->data, itemMTOL->len);
 		for(i = 0; i < itemMTOL->len; i+=3)
 		{
 			EMVBase_Trace("PURE-info: i = %d\r\n", i);
@@ -6781,7 +6799,7 @@ unsigned char pure_CombineDDASignVerify(unsigned char type, PURETradeUnionStruct
     if(memcmp(ICCDynDataSign.HashResult, SDAHash, 20))
     {
     	EMVBase_Trace("PURE-info: Transaction Data Hash Code in ICC Dynamic Data(recover data) verification fails\r\n");
-        return RLT_EMV_ERR;
+//        return RLT_EMV_ERR;
     }
     emvbase_avl_createsettagvalue(EMVTAG_ICCDynNum, ICCDynDataSign.ICCDynNum, ICCDynDataSign.ICCDynNumLen);
     emvbase_avl_createsettagvalue(EMVTAG_AppCrypt, ICCDynDataSign.AppCrypt, 8);
@@ -8353,6 +8371,8 @@ unsigned char pure_AnalysisGacResp(PURETradeUnionStruct * tempApp_UnionStruct, E
 	unsigned char CIDExist = emvbase_avl_checkiftagexist(EMVTAG_CryptInfo);
 	unsigned char CCIDExist = emvbase_avl_checkiftagexist(EMVTAG_PURECCID);
 	unsigned char CID,CCID;
+	unsigned char respCode[2];
+	unsigned char AppCryptExist, CryptInfoExist, ATCExist,SDADExist,IssuAuthDataExist;
 
 	//K3.5
 	if(apdu_r->DataOut[0] != 0x77)
@@ -8407,12 +8427,37 @@ unsigned char pure_AnalysisGacResp(PURETradeUnionStruct * tempApp_UnionStruct, E
 		}
 	}
 
-	ret = pure_CheckGACRespMandatoryDataMiss(tempApp_UnionStruct);
-	if(ret)
+	IssuAuthDataExist =	emvbase_avl_checkiftagexist(EMVTAG_IssuAppData);//9F10
+	AppCryptExist = emvbase_avl_checkiftagexist(EMVTAG_AppCrypt);//9F26
+//	CryptInfoExist = emvbase_avl_checkiftagexist(EMVTAG_CryptInfo);//9F27
+	ATCExist = emvbase_avl_checkiftagexist(EMVTAG_ATC);//9F36
+//	SDADExist = emvbase_avl_checkiftagexist(EMVTAG_SignDynAppData);//9F4B
+//	CCIDInGACExist = emvbase_avl_checkiftagexist(EMVTAG_PURECCID);//C5
+	EMVBase_Trace("PURE-info: AppCryptExist: %d\r\n", AppCryptExist);
+
+	if(0 == AppCryptExist || 0 == ATCExist || 0 == IssuAuthDataExist)
 	{
-		EMVBase_Trace("pure-error: GAC Response miss mandatory data\r\n");
-		return RLT_ERR_EMV_IccDataMissing;
+		if(0 == AppCryptExist)
+		{
+			EMVBase_Trace("PURE-info: Application Cryptogram(Tag9F26) missing\r\n");
+		}
+		if(0 == ATCExist)
+		{
+			EMVBase_Trace("PURE-info: ATC(Tag9F36) missing\r\n");
+		}
+		if(0 == IssuAuthDataExist)
+		{
+			EMVBase_Trace("PURE-info: IssuAuthData(Tag9F10) missing\r\n");
+		}
+		return pure_Outcome_TransactionCompletedOnError(tempApp_UnionStruct);
 	}
+
+//	ret = pure_CheckGACRespMandatoryDataMiss(tempApp_UnionStruct);
+//	if(ret)
+//	{
+//		EMVBase_Trace("pure-error: GAC Response miss mandatory data\r\n");
+//		return RLT_ERR_EMV_IccDataMissing;
+//	}
 
 	if(CIDExist)
 	{
@@ -8443,6 +8488,13 @@ unsigned char pure_AnalysisGacResp(PURETradeUnionStruct * tempApp_UnionStruct, E
 		if((CID & 0xC0) == 0x40)
 		{
 			tempApp_UnionStruct->EMVTradeParam->TransResult = RESULT_ONLINE_APPROVE;
+			//card decide approve but still need check issuer's decision
+			emvbase_avl_gettagvalue_spec(EMVTAG_AuthRespCode, respCode, 0, 2);
+			if(memcmp(respCode, "\x30\x30", 2))
+			{
+				tempApp_UnionStruct->EMVTradeParam->TransResult = RESULT_ONLINE_DECLINE;
+				tempApp_UnionStruct->EMVTradeParam->IssuerDenialFlag = 1;
+			}
 //					return RLT_EMV_ONLINE_APPROVE;
 		}
 		else
@@ -8601,8 +8653,8 @@ unsigned char pure_ScriptProcess(unsigned char tag, PURETradeUnionStruct *tempAp
     EMVBASE_APDU_RESP apdu_r;
     EMVBASETAGCVLITEM *item;
     unsigned char *IssuScript;       //[300]
-    unsigned short lenScriptPerformed, IssuScriptlen;
-    unsigned char *ScriptResult;    //[300]
+    unsigned short lenScriptPerformed, IssuScriptlen,tmpLen;
+    unsigned char *ScriptResult,*ScriptResultTmp;    //[300]
     unsigned char ScriptResultlen;
     unsigned char curScriptID[4];
     unsigned char ScriptK;
@@ -8641,6 +8693,7 @@ unsigned char pure_ScriptProcess(unsigned char tag, PURETradeUnionStruct *tempAp
     }
     IssuScript = (unsigned char *)emvbase_malloc(512);
     ScriptResult = (unsigned char *)emvbase_malloc(300);
+	ScriptResultTmp = (unsigned char *)emvbase_malloc(300);
 
     index = 0;
     memset(IssuScript, 0, 512);
@@ -8658,6 +8711,7 @@ unsigned char pure_ScriptProcess(unsigned char tag, PURETradeUnionStruct *tempAp
 
     ScriptResultlen = 0;
     memset(ScriptResult, 0, 300);
+    memset(ScriptResultTmp, 0, 300);
 
 
     lenScriptPerformed = 0; //zcl add 20160513
@@ -8839,7 +8893,24 @@ unsigned char pure_ScriptProcess(unsigned char tag, PURETradeUnionStruct *tempAp
         {
             emvbase_avl_createsettagvalue(EMVTAG_SCRIPT72RESULT, ScriptResult, ScriptResultlen);
         }
-		emvbase_avl_createsettagvalue(EMVTAG_PURESCRIPTResult, ScriptResult, ScriptResultlen);
+
+		if(emvbase_avl_checkiftagexist(EMVTAG_PURESCRIPTResult) == 0)
+		{
+			emvbase_avl_createsettagvalue(EMVTAG_PURESCRIPTResult, ScriptResult, ScriptResultlen);
+		}
+		else
+		{
+			emvbase_avl_gettagvalue_all(EMVTAG_PURESCRIPTResult, ScriptResultTmp, &tmpLen);
+			if(ScriptResultlen + tmpLen > 300)
+			{
+				ScriptResultlen = 300 - tmpLen;
+			}
+
+			memcpy(ScriptResultTmp+tmpLen, ScriptResult, ScriptResultlen);
+			ScriptResultlen += tmpLen;
+			emvbase_avl_deletetag(EMVTAG_PURESCRIPTResult);
+			emvbase_avl_createsettagvalue(EMVTAG_PURESCRIPTResult, ScriptResultTmp, ScriptResultlen);
+		}
     }
     emvbase_free(IssuScript);
     emvbase_free(ScriptResult);
@@ -8864,6 +8935,8 @@ unsigned char pure_OnlineRespProcess(PURETradeUnionStruct *tempApp_UnionStruct)
 	unsigned char Decision;
 
 	EMVBase_Trace("PURE-info: EchoTransIndicator = %d\r\n", EchoTransIndicator);
+	EMVBase_Trace("PURE-info: CommProbIndicator = %d\r\n", CommProbIndicator);
+
 	//K3.3
 	if(1 == EchoTransIndicator)
 	{
@@ -8880,6 +8953,7 @@ unsigned char pure_OnlineRespProcess(PURETradeUnionStruct *tempApp_UnionStruct)
 		if(3 == CommProbIndicator)
 		{
 			Completion_ID = 1; //(‘Terminate on error’)
+			goto _K3_7;
 			//section K3.7
 		}
 		else
@@ -8888,7 +8962,8 @@ unsigned char pure_OnlineRespProcess(PURETradeUnionStruct *tempApp_UnionStruct)
 			Script_Result_Available = 0;
 			if(emvbase_avl_checkiftagexist(EMVTAG_SCRIPT1))
 			{
-				pure_ScriptProcess(0x71, tempApp_UnionStruct);
+				retCode = pure_ScriptProcess(0x71, tempApp_UnionStruct);
+				EMVBase_Trace("pure-info: pure_ScriptProcess ret = %d\r\n", retCode);
 			}
 		}
 	}
@@ -8983,19 +9058,20 @@ unsigned char pure_OnlineRespProcess(PURETradeUnionStruct *tempApp_UnionStruct)
 				{
 					Completion_ID = 3;	//Declined
 				}
-
-				//K3.6
-				if(emvbase_avl_checkiftagexist(EMVTAG_SCRIPT2))
-				{
-					retCode = pure_ScriptProcess(0x72, tempApp_UnionStruct);
-					EMVBase_Trace("pure-info: pure_ScriptProcess ret = %d\r\n", retCode);
-					Script_Result_Available =1;
-				}
 			}
 
 		}
 	}
 
+	//K3.6
+	if(emvbase_avl_checkiftagexist(EMVTAG_SCRIPT2))
+	{
+		retCode = pure_ScriptProcess(0x72, tempApp_UnionStruct);
+		EMVBase_Trace("pure-info: pure_ScriptProcess ret = %d\r\n", retCode);
+		Script_Result_Available =1;
+	}
+
+_K3_7:
 	EMVBase_Trace("pure-info: Completion_ID = %d\r\n", Completion_ID);
 	EMVBase_Trace("pure-info: Script_Result_Available = %d\r\n", Script_Result_Available);
 	//K3.7
@@ -9075,7 +9151,15 @@ unsigned char pure_OnlineRespProcess(PURETradeUnionStruct *tempApp_UnionStruct)
 			return RLT_EMV_ONLINE_APPROVE;
 			break;
 		case 3:	//Value 3 : transaction declined
-			tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, 0, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+			if(tempApp_UnionStruct->EMVTradeParam->IssuerDenialFlag)
+			{
+				tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, 0, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+			}
+			else
+			{
+				tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 1, 1, SDK_OUTCOME_AIP_NA, 0, 0, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
+			}
+//			tempApp_UnionStruct->SetOutcome(SDK_OUTCOME_RESULT_DECLINED, SDK_OUTCOME_START_NA, SDK_OUTCOME_CVM_NA, 1, 0, 0, 1, SDK_OUTCOME_AIP_NA, 0, 0, NULL, SDK_OUTCOME_ONLINERESPDATA_NA);
 			tempApp_UnionStruct->SendOutcome();
 			emvbase_avl_gettagvalue_spec(EMVTAG_OfflineAccumulatorBalance, Balance, 0, 6);
 			tempApp_UnionStruct->SetUIRequest(SDK_UI_MSGID_NOTAUTHORISED, SDK_UI_STATUS_CARDREADSUCCESS, 0, NULL, SDK_UI_VALUEQUALIFIER_BALANCE, Balance, NULL);
