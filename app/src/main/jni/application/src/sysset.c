@@ -1772,7 +1772,10 @@ typedef struct
 void ShowCheckSum(void)
 {
 	sdkDispClearScreen();
-	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "CheckSum:  E0145F97", SDK_DISP_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Kernel:  B2BBC4C8", SDK_DISP_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "Reader:  505E8FAB", SDK_DISP_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "App:     CA23E0B3", SDK_DISP_DEFAULT);
+
 	sdkDispBrushScrecen();
 	return sdkKbWaitKey(SDK_KEY_MASK_ALL, 0);
 }
@@ -2322,6 +2325,48 @@ void PostSetTCPSetting(void)
 	removeLeadingZeros(data_f);
 	sdkOpenWifi(data_f, SimData.TCPPort);
 	SaveSimData(&SimData);
+}
+
+void PostSetOutcomeDelay(void)
+{
+	u8 delay[4], delay_asc[8+1];
+	s32 ret,i,j,len;
+	u8 *data_uf, *data_f;
+
+	sdkDispClearScreen();
+	sdkDispFillRowRam(SDK_DISP_LINE1, 0, "Outcome Delay", SDK_DISP_DEFAULT);
+	sdkDispBrushScreen();
+
+	delay_asc[0] = 8;
+
+	Trace("emv", "gOutcomeDelay: %d\r\n", gOutcomeDelay);
+	sdkU32ToBcd(delay, (u32)gOutcomeDelay, 4);
+	TraceHex("emv", "after switch delay:", delay, 4);
+	sdkBcdToAsc(&delay_asc[1], delay, 4);
+	Trace("emv", "after switch delay_asc: %s\r\n", &delay_asc[1]);
+
+	sdkKbKeyFlush();
+	ret = sdkKbGetScanf(0, delay_asc, 8, 8, SDK_MMI_NUMBER, SDK_DISP_LINE3);
+	Trace("emv", "sdkKbGetScanf retcode %d\r\n", ret);
+
+	if(SDK_KEY_ENTER == ret)
+	{
+		len = delay_asc[0];
+		TraceHex("emv", "input delay:", &delay_asc[1], len);
+		Trace("emv", "out len: %d\r\n", len);
+		if(len > 8)
+		{
+			len = 8;
+		}
+		sdkAscToBcd(delay, &delay_asc[1], len);
+		TraceHex("emv", "after switch delay:", delay, 4);
+		sdkBcdToU32((u32 *)(&gOutcomeDelay), delay, 4);
+		Trace("emv", "after input delay: %d\r\n", gOutcomeDelay);
+	}
+	else if(SDK_KEY_ESC == ret)
+	{
+		return ;
+	}
 }
 
 void PostSetHostCommuType(void)

@@ -237,6 +237,18 @@ s32 sdPureSetCmpCardNO(s32 (*CheckCardNo)(const u8 *pasPAN))
 	return SDK_OK;
 }
 
+s32 sdkPureSetRevokeyCheck(s32(*CheckPKNo)(const u8 *PKNo))
+{
+	if(gstPureTradeParam == NULL || gstPureTradeUnionStruct == NULL)
+	{
+		return SDK_PARA_ERR;
+	}
+
+	gstPureTradeUnionStruct->termipkrevokecheck = CheckPKNo;
+
+	return SDK_OK;
+}
+
 
 s32 sdkPureGetCTPreProcessIndicator(u8 *indicator)
 {
@@ -1286,6 +1298,7 @@ s32 sdkPureCAMSelect(const SDK_PURE_TRADE_PARAM * pstTradeParam)
 
 	retCode = pure_ODACheckMandotoryData(gstPureTradeUnionStruct);
 	Trace("emv", "pure_ODACheckMandotoryData retCode = %02d\r\n", retCode);
+	Trace("emv", "after pure_ODACheckMandotoryData tempApp_UnionStruct->EMVTradeParam->OfflineCAMSelectedIndicator = %02d\r\n", gstPureTradeUnionStruct->EMVTradeParam->OfflineCAMSelectedIndicator);
 
     sdkEMVBaseRltToSdkRlt(retCode, &rlt);
 	Trace("emv", "sdkPureProcessRestrict ret = %02d\r\n", rlt);
@@ -2907,7 +2920,7 @@ _DEALAFTERECHO:
 			ret = sdkPureTransProcess(gstsdkPureTradeTable);
 			if(SDK_EMV_TransOnlineWait == ret)
 			{
-				gPureTransStuatus = SDK_PURE_STATUS_GPO;
+				gPureTransStuatus = SDK_PURE_STATUS_TRANSINIT;
 				gstPureTradeParam->CurProcessIndicator = TRANS_ONLINE_RESPONSE;
 				if(gstPureTradeParam->SecondTap)
 				{

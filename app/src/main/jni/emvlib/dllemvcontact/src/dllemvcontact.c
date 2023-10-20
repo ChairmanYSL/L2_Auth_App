@@ -1947,7 +1947,7 @@ unsigned char EmvContact_ReadDataStorage(EMVCONTACTTradeUnionStruct *tempEmvCont
 	}
 
 	// step3
-	EMVBase_Hash(&(apdu_r.DataOut[index]), len, tempEmvContact_UnionStruct->EmvTradeParam->DSDHashValue); // DSDHash used during ODA
+	EMVBase_Hash_Back(&(apdu_r.DataOut[index]), len, tempEmvContact_UnionStruct->EmvTradeParam->DSDHashValue); // DSDHash used during ODA
 
 	if(8 == len)
 	{
@@ -3486,7 +3486,7 @@ unsigned char EmvContact_DOLProcessFunc(unsigned char type, unsigned char* CDDOL
 				}
 				else
 				{
-			    	EMVBase_Hash(TDOLData, TDOLDataLen, TCHashValue);
+			    	EMVBase_Hash_Back(TDOLData, TDOLDataLen, TCHashValue);
 				}
 
                 emvbase_free(TDOLData);
@@ -3849,7 +3849,7 @@ unsigned char EmvContact_GetIPK(EMVCONTACTTradeUnionStruct *tempEmvContact_Union
     }
     memset(IPKHash, 0, 20);
 
-    EMVBase_Hash(IPKData, index, IPKHash);
+    EMVBase_Hash_Back(IPKData, index, IPKHash);
 
 	emvbase_free(IPKData);
 
@@ -4199,7 +4199,7 @@ unsigned char EmvContact_GetICCPK(EMVCONTACTTradeUnionStruct *tempEmvContact_Uni
 	}
 	else
 	{
-    	EMVBase_Hash(ICCPKToSign, index, ICCPKHash);
+    	EMVBase_Hash_Back(ICCPKToSign, index, ICCPKHash);
 	}
 	emvbase_free(ICCPKToSign);
 
@@ -4714,7 +4714,7 @@ unsigned char EmvContact_DynSignVerify(EMVCONTACTTradeUnionStruct *tempEmvContac
 	}
 	else
 	{
-    	EMVBase_Hash(SDAToSign, index, SDAHash);
+    	EMVBase_Hash_Back(SDAToSign, index, SDAHash);
 	}
 
     emvbase_free(SDAToSign);
@@ -4919,7 +4919,7 @@ unsigned char EmvContact_SDVerify(EMVCONTACTTradeUnionStruct *tempEmvContact_Uni
 	else
 	{
 		EMVBase_Trace("EmvContact_SDVerify--line: %d\r\n", __LINE__);
-    	EMVBase_Hash(SSAToSign, index, SSAHash);
+    	EMVBase_Hash_Back(SSAToSign, index, SSAHash);
 	}
 
     if(recovSSA->HashInd == 0x01)  //SHA-1 algorithm
@@ -7154,7 +7154,7 @@ unsigned char EmvContact_GetICCPIN_EPK(EMVCONTACTTradeUnionStruct *tempEmvContac
     memcpy((unsigned char*)&ICCPIN_EPKToSign[index], (unsigned char*)ICCPIN_EPKExpitem->data, ICCPIN_EPKExpitem->len);
     index += ICCPIN_EPKExpitem->len;
 
-    EMVBase_Hash(ICCPIN_EPKToSign, index, ICCPIN_EPKHash);
+    EMVBase_Hash_Back(ICCPIN_EPKToSign, index, ICCPIN_EPKHash);
 
     if(recovICCPIN_EPK->HashInd == 0x01)  	//SHA-1 algorithm
     {
@@ -9344,7 +9344,7 @@ unsigned char EmvContact_CombineDDASignVerify(unsigned char type, EMVCONTACTTrad
 		EMVBase_Trace("recovSDA->HashInd != 0x01 error! \r\n");
         return RLT_EMV_ERR;
     }
-    EMVBase_Hash(SDAToSign, index, SDAHash);
+    EMVBase_Hash_Back(SDAToSign, index, SDAHash);
 
 
     if(memcmp(recovSDA->HashResult, SDAHash, 20))
@@ -9421,7 +9421,7 @@ unsigned char EmvContact_CombineDDASignVerify(unsigned char type, EMVCONTACTTrad
 	{
 
         EMVBase_Trace("emv-info:get hash,public\r\n");
-    	EMVBase_Hash(SDAToSign, index, SDAHash);
+    	EMVBase_Hash_Back(SDAToSign, index, SDAHash);
 	}
 
     emvbase_free(SDAToSign);

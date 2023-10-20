@@ -10,6 +10,15 @@ typedef struct {
   unsigned char exponent[MAX_RSA_MODULUS_LEN]; /* public exponent */
 } R_RSA_PUBLIC_KEY;
 
+#define SHA1_MAC_LEN 20
+
+typedef struct _SHA1_CTX{
+        unsigned int state[5];
+        unsigned int count[2];
+        unsigned char buffer[64];
+} SHA1_CTX;
+
+
 
 extern void *emvbase_malloc (unsigned int size);
 extern void emvbase_free (void *block);
@@ -90,14 +99,14 @@ static void EMVBase_NN_Decode (NN_DIGIT *a, unsigned int digits, unsigned char *
   NN_DIGIT t;
   int j;
   unsigned int i, u;
-  
+
   for (i = 0, j = len - 1; i < digits && j >= 0; i++) {
     t = 0;
     for (u = 0; j >= 0 && u < NN_DIGIT_BITS; j--, u += 8)
 			t |= ((NN_DIGIT)b[j]) << u;
 		a[i] = t;
   }
-  
+
   for (; i < digits; i++)
     a[i] = 0;
 }
@@ -177,7 +186,7 @@ static void EMVBase_NN_Mult (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c, unsigned int
 
     t = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*2*MAX_NN_DIGITS);
 
-	
+
 	EMVBase_NN_AssignZero (t, 2 * digits);
 
 	bDigits = EMVBase_NN_Digits (b, digits);
@@ -202,9 +211,9 @@ static void EMVBase_NN_Mult (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c, unsigned int
 
 
 	EMVBase_NN_Assign(a, t, 2 * digits);
-    
+
 	emvbase_free(t);
-	
+
 }
 
 /* Computes a = b * 2^c (i.e., shifts left c bits), returning carry.
@@ -274,7 +283,7 @@ static void EMVBase_NN_Div (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c,unsigned int c
 	ddDigits = EMVBase_NN_Digits (d, dDigits);
 	if(ddDigits == 0)
 		return;
-    
+
 	cc = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*2*(MAX_NN_DIGITS+1));
 	dd = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*MAX_NN_DIGITS);
 
@@ -356,8 +365,8 @@ static void EMVBase_NN_Div (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c,unsigned int c
 
     emvbase_free(cc);
 	emvbase_free(dd);
-	
-	
+
+
 }
 
 /* Computes a = b mod c.
@@ -368,15 +377,15 @@ static void EMVBase_NN_Div (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c,unsigned int c
 static void EMVBase_NN_Mod (NN_DIGIT *a, NN_DIGIT *b, unsigned int bDigits, NN_DIGIT *c,unsigned int cDigits)
 {
     NN_DIGIT *t;  //[2 * MAX_NN_DIGITS]
-    
-	
+
+
     t = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*2*MAX_NN_DIGITS);
-	
+
 	EMVBase_NN_Div (t, a, b, bDigits, c, cDigits);
-    
+
 	emvbase_free(t);
-    
-	
+
+
 }
 
 /* Computes a = b * c mod d.
@@ -414,11 +423,11 @@ static void EMVBase_NN_ModExp (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c, unsigned i
 	bPower[2] = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*MAX_NN_DIGITS);
 	t = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*MAX_NN_DIGITS);
 
-	
+
 	EMVBase_NN_Assign (bPower[0], b, dDigits);
 	EMVBase_NN_ModMult (bPower[1], bPower[0], b, d, dDigits);
     EMVBase_NN_ModMult (bPower[2], bPower[1], b, d, dDigits);
-  
+
     EMVBase_NN_ASSIGN_DIGIT (t, 1, dDigits);
 
 	cDigits = EMVBase_NN_Digits (c, cDigits);
@@ -443,7 +452,7 @@ static void EMVBase_NN_ModExp (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c, unsigned i
             EMVBase_NN_ModMult (t, t, bPower[s-1], d, dDigits);
         }
     }
-  
+
 	EMVBase_NN_Assign (a, t, dDigits);
 
 	emvbase_free(bPower[0]);
@@ -451,7 +460,7 @@ static void EMVBase_NN_ModExp (NN_DIGIT *a, NN_DIGIT *b, NN_DIGIT *c, unsigned i
 	emvbase_free(bPower[2]);
 	emvbase_free(t);
 
-	
+
 }
 
 /* Returns the significant length of a in bits.
@@ -502,7 +511,7 @@ static unsigned int EMVBase_NN_DigitBits (NN_DIGIT a)
 }
 
 /* Computes a * b, result stored in high and low. */
- 
+
 static void EMVBase_dmult( NN_DIGIT a,NN_DIGIT b, NN_DIGIT *high,NN_DIGIT *low)
 {
 	NN_HALF_DIGIT al, ah, bl, bh;
@@ -549,7 +558,7 @@ static int EMVBase_RSAPublicDecrypt(unsigned char *output, unsigned char *input,
 	unsigned int modulusLen;
 	unsigned int eDigits, nDigits;
 	NN_DIGIT *c, *e, *m,*n;  //[MAX_NN_DIGITS]
-	
+
 	modulusLen = (publicKey->bits + 7) / 8;
 	if(inputLen > modulusLen)
 		return 1;
@@ -559,12 +568,12 @@ static int EMVBase_RSAPublicDecrypt(unsigned char *output, unsigned char *input,
 	m = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*MAX_NN_DIGITS);
 	n = (NN_DIGIT *)emvbase_malloc(sizeof(NN_DIGIT)*MAX_NN_DIGITS);
 
-	
+
 	/* decode the required RSA function input data */
 	EMVBase_NN_Decode(m, MAX_NN_DIGITS, input, inputLen);
 	EMVBase_NN_Decode(n, MAX_NN_DIGITS, publicKey->modulus, MAX_RSA_MODULUS_LEN);
-	EMVBase_NN_Decode(e, MAX_NN_DIGITS, publicKey->exponent, MAX_RSA_MODULUS_LEN);	
-	nDigits = EMVBase_NN_Digits(n, MAX_NN_DIGITS);	
+	EMVBase_NN_Decode(e, MAX_NN_DIGITS, publicKey->exponent, MAX_RSA_MODULUS_LEN);
+	nDigits = EMVBase_NN_Digits(n, MAX_NN_DIGITS);
 	eDigits = EMVBase_NN_Digits(e, MAX_NN_DIGITS);
 /*	if(NN_Cmp(m, n, nDigits) >= 0)
 		return(RE_DATA);
@@ -581,9 +590,9 @@ static int EMVBase_RSAPublicDecrypt(unsigned char *output, unsigned char *input,
 	emvbase_free(e);
     emvbase_free(m);
 	emvbase_free(n);
-	
+
 	return 0;
-	
+
 }
 
 
@@ -595,13 +604,13 @@ unsigned char EMVBase_RSARecover(unsigned char *m, unsigned int mLen, unsigned c
 	R_RSA_PUBLIC_KEY *publicKey;
 
 	publicKey = (R_RSA_PUBLIC_KEY *)emvbase_malloc(sizeof(R_RSA_PUBLIC_KEY));
-	
+
 	memset((unsigned char*)publicKey,0,sizeof(R_RSA_PUBLIC_KEY));
 	publicKey->bits = mLen*8;
 
-	
+
 	if(eLen == 0x01)
-		publicKey->exponent[MAX_RSA_MODULUS_LEN-1] = *e;	
+		publicKey->exponent[MAX_RSA_MODULUS_LEN-1] = *e;
 	else if(eLen == 0x03)
 	{
 		if(memcmp(e,"\x00\x00\x03",3) == 0)
@@ -615,34 +624,34 @@ unsigned char EMVBase_RSARecover(unsigned char *m, unsigned int mLen, unsigned c
 			publicKey->exponent[MAX_RSA_MODULUS_LEN-3] = *(e+2);
 		}
 	}
-	else 
+	else
 	{
 	    emvbase_free(publicKey);
 		return 1;
 	}
-	
+
 	memcpy((unsigned char *)&publicKey->modulus[MAX_RSA_MODULUS_LEN-mLen],&m[0],mLen);
-    
-	
+
+
 	i = EMVBase_RSAPublicDecrypt(output,input,mLen,publicKey);
 
-	
+
 	emvbase_free(publicKey);
-	
+
 	return i;
 #else
 
     unsigned char tempe[4] = {0};
     unsigned char *pk,*data;
     unsigned int len;
-    
+
     if(eLen == 0x01)
-        tempe[3] = *e;	
+        tempe[3] = *e;
     else if(eLen == 0x03)
     {
         if(memcmp(e,"\x00\x00\x03",3) == 0)
         {
-        tempe[3] = 0x03;	
+        tempe[3] = 0x03;
         }
         else
         {
@@ -681,7 +690,7 @@ unsigned char EMVBase_RSARecover(unsigned char *m, unsigned int mLen, unsigned c
         emvbase_free(data);
         return 0;
     }
-#endif       
+#endif
 }
 
 
@@ -711,16 +720,16 @@ unsigned char EMVBase_RSARecover(unsigned char *m, unsigned int mLen, unsigned c
 
 static void  EMVBase_SHA1Transform(unsigned int state[5], unsigned char buffer[64])
 {
-        unsigned int a, b, c, d, e;        
+        unsigned int a, b, c, d, e;
         unsigned int workspace[16];
-        
+
         typedef union {
                 unsigned char c[64];
                 unsigned int l[16];
         } CHAR64LONG16;
         CHAR64LONG16* block;
 //#ifdef SHA1HANDSOFF
-        
+
         block = (CHAR64LONG16 *) workspace;
         memcpy(block, buffer, 64);
 /*#else
@@ -837,16 +846,21 @@ static void  EMVBase_SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 }
 
 
-#define	SHA1Context			SHA1_CTX
+//#define	SHA1Context					SHA1_CTX
 #define EMVBase_SHA1Reset			EMVBase_SHA1Init
 #define EMVBase_SHA1Input			EMVBase_SHA1Update
 #define EMVBase_SHA1Result(a, b)	EMVBase_SHA1Final(b, a)
 
 void EMVBase_Hash(unsigned char* bb,unsigned int len,unsigned char* Message_Digest)
 {
-	SHA1Context sha;
-	EMVBase_SHA1Reset(&sha);
-	EMVBase_SHA1Input(&sha, bb, len);
-	EMVBase_SHA1Result(&sha, Message_Digest);
+//	SHA1Context sha;
+//	EMVBase_SHA1Reset(&sha);
+//	EMVBase_SHA1Input(&sha, bb, len);
+//	EMVBase_SHA1Result(&sha, Message_Digest);
 }
 
+
+void EMVBase_Hash_Back(unsigned char *input, unsigned int input_len, unsigned char *output)
+{
+	SHA1(input, input_len, output);
+}

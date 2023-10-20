@@ -15,6 +15,7 @@ int Menu0()
     sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.SALE 2.CheckSum", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "3.Parameters 4.AutoTest", SDK_DISP_LEFT_DEFAULT);
     sdkDispFillRowRam(SDK_DISP_LINE4, 0, "5.BCTC Param 6.TCP Set", SDK_DISP_LEFT_DEFAULT);
+    sdkDispFillRowRam(SDK_DISP_LINE5, 0, "7.Outcome Delay", SDK_DISP_LEFT_DEFAULT);
 	sdkDispBrushScreen();
 
     sdkKbKeyFlush();
@@ -53,6 +54,16 @@ int Menu0()
 				{
 					memset(gbcOtherAmount, 0, 6);
 				}
+
+				if(gstbctcautotrade.typeexist)
+				{
+					gTransType = gstbctcautotrade.transtype;
+				}
+				else
+				{
+					gTransType = 0x00;
+				}
+
 				if(gstbctcautotrade.currexpexist)
 				{
 					gTransCurrExponent = gstbctcautotrade.currexp;
@@ -184,6 +195,10 @@ int Menu0()
 			 	 PostSetTCPSetting();
 				 goto _RETURN;
 
+			 case SDK_KEY_7:
+				PostSetOutcomeDelay();
+				goto _RETURN;
+
              case SDK_KEY_FUNCTION:
 			 case SDK_KEY_0:
 			 	PostShowAppCompilerTime();
@@ -302,7 +317,7 @@ s32 MenuTest()
 	sdkDispFillRowRam(SDK_DISP_LINE2, 0, "1.Version 2.Add Test AID", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE3, 0, "3.Send TCP 4.Outcome", SDK_DISP_LEFT_DEFAULT);
 	sdkDispFillRowRam(SDK_DISP_LINE4, 0, "5.APDU 6.Random", SDK_DISP_LEFT_DEFAULT);
-	sdkDispFillRowRam(SDK_DISP_LINE5, 0, "7.SN 8.Display", SDK_DISP_LEFT_DEFAULT);
+	sdkDispFillRowRam(SDK_DISP_LINE5, 0, "7.SHA1 8.Display", SDK_DISP_LEFT_DEFAULT);
 	sdkDispBrushScreen();
 
 	sdkKbKeyFlush();
@@ -317,6 +332,7 @@ s32 MenuTest()
 
 		case SDK_KEY_2:
 			AddTestCardAID();
+			AddUnionPayCTAID();
 			break;
 
 		case SDK_KEY_3:

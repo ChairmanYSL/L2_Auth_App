@@ -3804,7 +3804,7 @@ void BCTCSendOutCome(void)
 	ComPackSendLen+=2;
 
 	ret = BCTCSendData(ComPackSend, ComPackSendLen);
-	sdkmSleep(100);
+	sdkmSleep(500);
 	if(flag & 0x20)
 	{
 		BCTCSendDataRecord();
@@ -3849,6 +3849,10 @@ void BCTCSendUIRequest(int type)
 	else if(PURE_UIREQ_RESTART == type)
 	{
 		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x17\x0E", 4);
+	}
+	else if(PURE_UIREQ_SELFDEFINE == type)
+	{
+		memcpy(ComPackSend+ComPackSendLen, "\xDF\x81\x18\x0E", 4);
 	}
 	ComPackSendLen += 4;
 	ComPackSend[ComPackSendLen++] =	gstUIRequest.MessageID;

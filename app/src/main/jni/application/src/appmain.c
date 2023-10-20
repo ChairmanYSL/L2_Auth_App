@@ -103,6 +103,8 @@ s32 appmain(s32 argc, char const *argv[])
     gDispSeePhone=0;
 	gJCBPaperNum = 1;
 	gTransCurrExponent = 2;//默认有两位小数
+	gTransType = 0x00; //default for purchase
+	gOutcomeDelay = 100;//default delay 100ms
 
 	gSerialPortId = OpenComm();
 	Trace("lishiyao", "return portID:%d\r\n", gSerialPortId);

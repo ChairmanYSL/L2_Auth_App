@@ -54,6 +54,8 @@ EXTERN u8 gstasAmount[12 + 1];
 EXTERN u8 gbcOtherAmount[6];//sujianzhong 2016.09.28 10:24
 EXTERN u8 TermInfobPrintReceipt;
 EXTERN u8 TermInfobReversal;
+EXTERN u8 gTransType;
+
 
 EXTERN u8 gDispSeePhone;//zwb 170509
 EXTERN u8 gDispSecondTap;//zwb 170509
@@ -69,5 +71,6 @@ EXTERN int gSerialPortId;
 EXTERN int gTCPPort;
 EXTERN u8 gTCPAddress[16];
 EXTERN u8 gHostTransType;
+EXTERN s32 gOutcomeDelay;
 
 #endif

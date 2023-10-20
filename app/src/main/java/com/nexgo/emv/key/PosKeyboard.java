@@ -94,106 +94,51 @@ public class PosKeyboard extends Keyboard {
 			return 0;
 		}
 	}
+
+	private Object lock = new Object();
 	public void setKeyCode(int keyCode){
 		Log.e("txq","setKeyCode:"+keyList.size());
-		keyList.add(keyCode);
+		synchronized (lock){
+			keyList.add(keyCode);
+		}
 	}
 
 	public int Kb_GetKey() {
-//		try {
-//			Thread.sleep(100);
-//		}catch (Exception e){}
 		if(keyList.size()<=0){
 			return 0;
 		}
-		int keyCode=keyList.get(0);
-		keyList.remove(0);
-		Log.e("txq","Kb_GetKey:"+keyCode);
-		switch (keyCode){
-		case 0x01:
-			keyCode = KEYUP;
-			break;
-		case 0x02:
-			keyCode = KEYDOWN;
-			break;
-		case 0x03:
-			keyCode = KEYMENU;
-			break;
-		case 0x43:
-			keyCode = KEYCLEAR;
-			break;
-		case 0x3E:
-			keyCode = KEYENTER;
-			break;
-		case 0x3F:
-			keyCode = KEYCANCEL;
-			break;
-		case 0x40:
-			keyCode = KEYBCKSPACE;
-			break;
-		case 0x15:
-			keyCode = KEYFN;
-			break;
+		synchronized (lock){
+			int keyCode=keyList.get(0);
+			keyList.remove(0);
+			Log.e("txq","Kb_GetKey:"+keyCode);
+			switch (keyCode){
+				case 0x01:
+					keyCode = KEYUP;
+					break;
+				case 0x02:
+					keyCode = KEYDOWN;
+					break;
+				case 0x03:
+					keyCode = KEYMENU;
+					break;
+				case 0x43:
+					keyCode = KEYCLEAR;
+					break;
+				case 0x3E:
+					keyCode = KEYENTER;
+					break;
+				case 0x3F:
+					keyCode = KEYCANCEL;
+					break;
+				case 0x40:
+					keyCode = KEYBCKSPACE;
+					break;
+				case 0x15:
+					keyCode = KEYFN;
+					break;
+			}
+			return keyCode;
 		}
-		return keyCode;
-		// Integer keyValue;
-
-//		int value;
-//		while (true) {
-//			if (Kb_Hit() == 1) {
-//				Log.e("1111111111111111","Kb_Hit: 1");
-//				break;
-//			}
-//
-//			try {
-//				Thread.sleep(100);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
-//		Log.e("1111111111111111","Kb_Hit: 2");
-//		m_keyCode = keyList.get(0);
-//		Log.e("1111111111111111","Kb_Hit: 3");
-//		keyList.remove(0);
-//		Log.e("1111111111111111","Kb_Hit: 4");
-//		value = m_keyCode.intValue();
-//		Log.e("1111111111111111", "Kb_GetKey value = " + value);
-//
-//		if(value == 0x05){
-//			Message msg = new Message();
-//			msg.what = 2;
-//			handler.sendMessage(msg);
-//		}
-//
-//		switch (value){
-//			case 0x01:
-//				value = KEYUP;
-//				break;
-//			case 0x02:
-//				value = KEYDOWN;
-//				break;
-//			case 0x03:
-//				value = KEYMENU;
-//				break;
-//			case 0x43:
-//				value = KEYCLEAR;
-//				break;
-//			case 0x3E:
-//				value = KEYENTER;
-//				break;
-//			case 0x3F:
-//				value = KEYCANCEL;
-//				break;
-//			case 0x40:
-//				value = KEYBCKSPACE;
-//				break;
-//			case 0x15:
-//				value = KEYFN;
-//				break;
-//		}
-//
-//		return value;
 	}
 
 	/**

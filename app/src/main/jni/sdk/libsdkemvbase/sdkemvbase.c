@@ -1695,7 +1695,7 @@ s32 sdkEMVBaseVerifyCAPK(const SDK_EMVBASE_CAPK_STRUCT* capk)
     uiIndex += capk->ExponentLen;
 
 
-    EMVBase_Hash(checkData, uiIndex, checkSum);
+    EMVBase_Hash_Back(checkData, uiIndex, checkSum);
 
     if(capk->CheckSumLen && memcmp(capk->CheckSum, checkSum, 20))
     {

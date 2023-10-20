@@ -132,7 +132,7 @@ typedef struct
     unsigned char sn[3];
 }BCTC_PKRECOVA;
 
-EXTERN BCTC_PKRECOVA gstbctcpkrecova[2];
+EXTERN BCTC_PKRECOVA gstbctcpkrecova[30];
 
 EXTERN unsigned char gstbctcupdatetemplate[850];
 EXTERN unsigned short gbctcupdatetemplatelen;
